@@ -8,7 +8,7 @@
 int main() {
 
     //singleton niezaimplementowany
-    P2PNode p2PNode(EXAMPLE_UNIQUE_NODE_NAME);
+//    P2PNode p2PNode(EXAMPLE_UNIQUE_NODE_NAME);
     FileHandler fileHandler;
 
     if(fileHandler.setWorkspacePath(EXAMPLE_WORKSPACE_PATH) != WORKSPACE_SUCCESS) {
