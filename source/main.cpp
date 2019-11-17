@@ -12,6 +12,7 @@ int main() {
     P2PNode p2PNode(EXAMPLE_UNIQUE_NODE_NAME);
     LocalSystemHandler handler(p2PNode);
 
+
     if(handler.setWorkspacePath(EXAMPLE_WORKSPACE_PATH) != WORKSPACE_SUCCESS) {
         return 1;
     }
