@@ -4,6 +4,7 @@
 
 LocalSystemHandler::LocalSystemHandler(P2PNode p2PNode) : p2PNode(p2PNode) {
     setDefaultWorkspace();
+    restorePreviousState();
 }
 /*
  * API wzialem z
@@ -31,7 +32,7 @@ FileOperationResult LocalSystemHandler::addFileToWorkspace(std::string filepath)
     // w przeciwnym wypadku utworz link z folderu roboczego
     // ale najpierw sprawdz czy ten folder istnieje
 
-    if(!filesys::exists(workspacePath)) {
+    if(!filesys::exists(workspaceUpperDirPath)) {
         std::cout << "Folder roboczy nie istnieje\n";
         return FILE_WORKSPACE_NOT_EXIST;
     }
@@ -45,7 +46,7 @@ FileOperationResult LocalSystemHandler::addFileToWorkspace(std::string filepath)
         filename = filename.erase(0, cut_index + 1);
     }
     
-    if(link(filepath.c_str(), (workspacePath + "/" + filename).c_str()) != 0) {
+    if(link(filepath.c_str(), (workspaceUpperDirPath + filename).c_str()) != 0) {
         std::cout << "Link sie nie powiodl, plik o takiej nazwie juz istnieje\n";
         return FILE_LINK_ERROR;
     }
@@ -66,12 +67,12 @@ DirOperationResult LocalSystemHandler::setWorkspacePath(std::string workspacePre
         return DIR_PREFIX_TO_NOT_DIRECTORY;
     }
 
-    std::string fullWorkspacePath = workspacePrefix + workspaceSuffix;
+    std::string fullWorkspacePath = workspacePrefix + workspaceDirName;
 
     // if workspace exists it is treated as success
     if(filesys::exists(fullWorkspacePath)) {
         std::cout << "Folder roboczy " << fullWorkspacePath << " juz istnieje\n";
-        workspacePath = fullWorkspacePath;
+        workspaceUpperDirPath = fullWorkspacePath + "/";
         return DIR_SUCCESS;
     }
 
@@ -81,24 +82,27 @@ DirOperationResult LocalSystemHandler::setWorkspacePath(std::string workspacePre
     }
 
     std::cout << "Utworzono folder roboczy: " << fullWorkspacePath << "\n";
-    workspacePath = fullWorkspacePath;
+    workspaceUpperDirPath = fullWorkspacePath;
 
     return  DIR_SUCCESS;
 }
 
+FileOperationResult LocalSystemHandler::showLocalFiles() {
+
+    if(p2PNode.showLocalFiles() != ACTION_SUCCESS) {
+        return FILE_SHOW_NAME_ERROR;
+    }
+}
+
 FileOperationResult LocalSystemHandler::removeFileFromWorkspace(std::string fileToRemove) {
 
-    std::string fullPathToFile = workspacePath + "/" + fileToRemove;
-    if(!filesys::exists(fullPathToFile)) {
-        std::cout << "Nieistniejaca sciezka\n";
-        return FILE_DOES_NOT_EXIST;
+    FileOperationResult ret = removeFileFromSystem(fileToRemove);
+    if( ret != FILE_SUCCESS){
+        std::cout << "Usuwanie przerwane.\n";
+        return ret;
     }
 
-    if(!filesys::is_regular_file(fullPathToFile)) {
-        std::cout << "To nie plik\n";
-        return FILE_NOT_REGULAR_FILE;
-    }
-
+    std::string fullPathToFile = workspaceUpperDirPath + fileToRemove;
     // w przeciwnym wypadku usuwa plik z folderu
 
     if(p2PNode.revoke(fileToRemove) != ACTION_SUCCESS) {
@@ -113,20 +117,14 @@ FileOperationResult LocalSystemHandler::removeFileFromWorkspace(std::string file
         return FILE_CANNOT_REMOVE_FROM_WORKSPACE;
     }
 
+    // usuwa z pliku konfiguracyjnego
     std::cout << "Plik " << fileToRemove << " zostal usuniety z folderu roboczego ( i z systemu )\n";
     return FILE_SUCCESS;
 }
 
-FileOperationResult LocalSystemHandler::showLocalFiles() {
-
-    if(p2PNode.showLocalFiles() != ACTION_SUCCESS) {
-        return FILE_LIST_ERROR;
-    }
-}
-
 FileOperationResult LocalSystemHandler::removeFileFromSystem(std::string fileToRevoke) {
 
-    std::string fullPathToFile = workspacePath + "/" + fileToRevoke;
+    std::string fullPathToFile = workspaceUpperDirPath + fileToRevoke;
     if(!filesys::exists(fullPathToFile)) {
         std::cout << "Nieistniejaca sciezka\n";
         return FILE_DOES_NOT_EXIST;
@@ -141,13 +139,21 @@ FileOperationResult LocalSystemHandler::removeFileFromSystem(std::string fileToR
         return FILE_CANNOT_REMOVE_FROM_SYSTEM;
     }
 
+    if( updateConfig(fileToRevoke, CONFIG_REMOVE) != FILE_SUCCESS ){
+        std::cout << "Plik nie mogl zostac usuniety z pliku konfiguracyjengo\n";
+        std::cout << "Usuwanie nie powiodlo sie\n";
+
+        p2PNode.uploadFile(fileToRevoke);
+        return FILE_CANNOT_REMOVE_FROM_CONFIG;
+    }
+
     std::cout << "Plik " << fileToRevoke << " zostal usuniety z systemu\n";
     return FILE_SUCCESS;
 }
 
 FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
 
-    std::string fullPathToFile = workspacePath + "/" + fileToAdd;
+    std::string fullPathToFile = workspaceUpperDirPath + fileToAdd;
     if(!filesys::exists(fullPathToFile)) {
         std::cout << "Nieistniejaca sciezka\n";
         return FILE_DOES_NOT_EXIST;
@@ -161,6 +167,10 @@ FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
     if(p2PNode.uploadFile(fileToAdd) != ACTION_SUCCESS) {
         return FILE_CANNOT_ADD_TO_SYSTEM;
     }
+
+    // dodaje informacje do pliku konfiguracyjnego
+    // o tym, ze plik zostanie udostepniony
+    updateConfig(fileToAdd, CONFIG_ADD);
 
     std::cout << "Plik " << fileToAdd << " zostal dodany do systemu\n";
     p2PNode.broadcastFiles();
@@ -177,7 +187,7 @@ FileOperationResult LocalSystemHandler::showGlobalFiles(bool printOwner) {
 
 DirOperationResult LocalSystemHandler::showWorkspaceFiles() {
 
-    std::string fullWorkspacePath = workspacePath + workspaceSuffix;
+    std::string fullWorkspacePath = workspaceUpperDirPath + workspaceDirName;
 
     if(!filesys::exists(fullWorkspacePath)) {
         std::cout << "Folder roboczy nie istnieje!\n";
@@ -190,7 +200,12 @@ DirOperationResult LocalSystemHandler::showWorkspaceFiles() {
     }
 
     for(const auto & file : filesys::directory_iterator(fullWorkspacePath)){
-        std::cout << file.path() << "\n";
+        // nie pokazuj plikow konfiguracyjnych
+        if(file.path() != fullWorkspacePath + configFileName &&
+            file.path() != fullWorkspacePath + ".tmp" + configFileName) {
+
+            std::cout << file.path() << "\n";
+        }
     }
     return DIR_SUCCESS;
 }
@@ -206,7 +221,7 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
     }
 
     std::string workspacePathSufix(linuxName);
-    std::string defaultWorkspacePath = "/home/" + workspacePathSufix;
+    std::string defaultWorkspacePath = "/home/" + workspacePathSufix + "/";
 
     if(!filesys::exists(defaultWorkspacePath)) {
         std::cout << "Nie udalo sie ustawic domyslnego folderu roboczego\n";
@@ -218,9 +233,115 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
         return DIR_PREFIX_TO_NOT_DIRECTORY;
     }
 
-    workspacePath = defaultWorkspacePath;
+    workspaceUpperDirPath = defaultWorkspacePath;
 
     return DIR_CANNOT_CREATE;
+}
+
+FileOperationResult LocalSystemHandler::restorePreviousState() {
+
+    std::string fullConfigFilePath = workspaceUpperDirPath + workspaceDirName + configFileName;
+    if(!filesys::exists(fullConfigFilePath)) {
+        // tworzy plik konfiguracyjny
+        std::ofstream output(fullConfigFilePath);
+        return FILE_SUCCESS;
+    }
+
+    if(!filesys::is_regular_file(fullConfigFilePath)) {
+        std::cout << "Plik konfiguracyjny nie jest regularnym plikiem\n";
+        return FILE_NOT_REGULAR_FILE;
+    }
+
+    std::ofstream configFile;
+
+    // otwiera plik do odczytu
+    std::ifstream infile(fullConfigFilePath);
+    // wiersz z pliku
+    std::string configRecord;
+    // nazwa pliku zapisana w konfiguracji
+    std::string fileName;
+
+    // otwiera plik i iteruje po nim
+    configFile.open(fullConfigFilePath, std::ios::out);
+
+    while(std::getline(infile, configRecord)) {
+
+        std::istringstream iss(configRecord);
+        if(!(iss >> fileName)) {
+            return FILE_CANNOT_READ;
+        }
+
+        p2PNode.uploadFile(fileName);
+    }
+
+}
+
+FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, ConfigOperation action) {
+
+    std::string fullConfigFilePath = workspaceUpperDirPath + workspaceDirName + configFileName;
+
+    if(!filesys::exists(fullConfigFilePath)) {
+        // jesli nie ma to stworz zamiast zglaszac blad.
+        std::ofstream output(fullConfigFilePath);
+    }
+
+    if(!filesys::is_regular_file(fullConfigFilePath)) {
+        std::cout << "Blad pliku konfiguracyjnego - zmiany nie zostana zapisane\n";
+        return FILE_NOT_REGULAR_FILE;
+    }
+
+    // dopisz plik do pliku konfiguracyjnego
+    std::ofstream configFile;
+
+    // dodaje nowy rekord
+    if(action == CONFIG_ADD) {
+        configFile.open(fullConfigFilePath, std::ios::in | std::ios::app);
+        configFile << name << "\n";
+
+    } else if(action == CONFIG_REMOVE){
+
+        /*
+         * tworzy plik tymczasowy juz bez usunietego rekordu
+         * nastepnie zastepuje nim konfiguracyjny
+         */
+        // otwiera plik do odczytu
+        std::ifstream infile(fullConfigFilePath);
+        // wiersz z pliku
+        std::string configRecord;
+        // nazwa pliku zapisana w konfiguracji
+        std::string fileName;
+
+        // tworzy i otwiera plik do zapisu
+        std::string fullTmpConfigFilePath = workspaceUpperDirPath + workspaceDirName + "/.tmp" + configFileName;
+        configFile.open(fullTmpConfigFilePath, std::ios::out);
+
+        while(std::getline(infile, configRecord)) {
+
+            std::istringstream iss(configRecord);
+            if(!(iss >> fileName)) {
+                return FILE_CANNOT_READ;
+            }
+
+            if(fileName != name) {
+                configFile << name << "\n";
+            }
+        }
+
+        infile.close();
+        configFile.close();
+
+        // zamienia pliki
+        if(remove(fullConfigFilePath.c_str())) {
+            return FILE_CANNOT_UPDATE_CONFIG;
+        }
+
+        if(rename(fullTmpConfigFilePath.c_str(), fullConfigFilePath.c_str())) {
+            // jak starczy czasu to dodam obsluge tej sytuacji
+            std::cout << "W wyniku bledu, stracono plik konfiguracyjny\n";
+            return FILE_CANNOT_UPDATE_CONFIG;
+        }
+    }
+    return FILE_SUCCESS;
 }
 
 
