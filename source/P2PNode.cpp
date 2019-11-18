@@ -9,8 +9,14 @@ ActionResult P2PNode::uploadFile(std::string uploadFileName) {
     File file(std::move(uploadFileName), name);
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
-    localFiles.addFile(file);
-    return ACTION_SUCCESS;
+    AddFileResult ret = localFiles.addFile(file);
+    if(ret == ADD_ALREADY_EXISTS){
+        return ACTION_NO_EFFECT;
+    }
+
+    if(ret == ADD_SUCCESS) {
+        return ACTION_SUCCESS;
+    }
 }
 
 ActionResult P2PNode::showLocalFiles() {

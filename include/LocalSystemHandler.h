@@ -23,7 +23,12 @@ enum FileOperationResult {
     FILE_CANNOT_REMOVE_FROM_SYSTEM = 6,
     FILE_CANNOT_REMOVE_FROM_WORKSPACE = 7,
     FILE_CANNOT_ADD_TO_SYSTEM = 8,
-    FILE_LIST_ERROR = 9,
+    FILE_SHOW_NAME_ERROR = 9,
+    FILE_CANNOT_OPEN = 10,
+    FILE_CANNOT_READ = 11,
+    FILE_CANNOT_WRITE = 12,
+    FILE_CANNOT_REMOVE_FROM_CONFIG = 13,
+    FILE_CANNOT_UPDATE_CONFIG = 14,
 };
 
 enum DirOperationResult {
@@ -34,14 +39,28 @@ enum DirOperationResult {
     DIR_CANNOT_FIND_WORKSPACE_USER = 4,
 };
 
+enum ConfigOperation{
+    CONFIG_ADD = 0,
+    CONFIG_REMOVE = 1,
+};
 class LocalSystemHandler{
 
 private:
-    const std::string workspaceSuffix = "/.P2Pworkspace";
-    std::string workspacePath;
+    const std::string workspaceDirName = ".P2Pworkspace/";
+    const std::string configFileName = ".p2P.config";
+    std::string workspaceUpperDirPath;
     P2PNode p2PNode;
 
     DirOperationResult setDefaultWorkspace();
+    /*
+     * w pliku konfiguracyjnym jest spis plikow
+     * ktore zostaly udostepnione
+     */
+    // przywraca stan na podstawie pliku konfiguracyjnego
+    FileOperationResult restorePreviousState();
+    // nadpisuje konfiguracje po wprowadzeniu zmian
+    FileOperationResult updateConfig(const std::string&, ConfigOperation);
+
 public:
     LocalSystemHandler(P2PNode);
     // tylko do oczytu
@@ -64,5 +83,6 @@ public:
     FileOperationResult removeFileFromWorkspace(std::string);
     // ls w folderze roboczym
     DirOperationResult showWorkspaceFiles();
+
 };
 #endif //TINY_LOCALSYSTEMHANDLER_H

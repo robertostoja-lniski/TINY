@@ -1,7 +1,14 @@
 #include "../include/P2PRecord.h"
 
-void P2PRecord::addFile(File file) {
+AddFileResult P2PRecord::addFile(File file) {
+
+    auto it = fileSet.find(file);
+    if(it != fileSet.end()) {
+        return ADD_ALREADY_EXISTS;
+    }
+
     fileSet.insert(file);
+    return ADD_SUCCESS;
 }
 
 void P2PRecord::print() {

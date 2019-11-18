@@ -14,7 +14,8 @@
 enum ActionResult {
     ACTION_NOT_HANDLED = -1,
     ACTION_SUCCESS = 0,
-    ACTION_FAILURE = 1,
+    ACTION_NO_EFFECT = 1,
+    ACTION_FAILURE = 2,
 };
 
 class P2PNode {
