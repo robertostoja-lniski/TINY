@@ -7,22 +7,20 @@
 
 
 #include <map>
-#include "P2Precord.h"
-#include "File.h"
+#include "P2PRecord.h"
 
 class P2PFiles {
 
 private:
-    std::map< std::string, P2Precord > files;
+    std::map< std::string, P2PRecord > files;
     // wykorzystywane do wypisywania
-    std::map< std::string, P2Precord > getFiles() const;
+    std::map< std::string, P2PRecord > getFiles() const;
 
 public:
     // dostep powinien byc synchronizowany
-    void updateFiles( std::string name, P2Precord newFiles);
+    void updateFiles(std::string name, P2PRecord newFiles);
     // odczyt powinien byc synchronizowany
     void showFiles();
-
 };
 
 

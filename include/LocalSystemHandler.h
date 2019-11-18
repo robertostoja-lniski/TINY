@@ -1,5 +1,5 @@
-#ifndef TINY_FILEHANDLER_H
-#define TINY_FILEHANDLER_H
+#ifndef TINY_LOCALSYSTEMHANDLER_H
+#define TINY_LOCALSYSTEMHANDLER_H
 
 #include <string>
 #include <iostream>
@@ -19,6 +19,9 @@ enum FileOperationResult {
     FILE_WORKSPACE_NOT_EXIST = 3,
     FILE_HOMEPATH_BROKEN = 4,
     FILE_LINK_ERROR = 5,
+    FILE_CANNOT_REMOVE_FROM_SYSTEM = 6,
+    FILE_CANNOT_REMOVE_FROM_WORKSPACE = 7,
+    FILE_CANNOT_ADD_TO_SYSTEM = 8,
 };
 
 enum DirOperationResult {
@@ -28,18 +31,27 @@ enum DirOperationResult {
     WORKSPACE_CANNOT_CREATE = 3,
 };
 
-class FileHandler{
+class LocalSystemHandler{
 
 private:
     const std::string workspaceSuffix = "/.P2Pworkspace";
     std::string workspacePath;
-
-
+    P2PNode p2PNode;
 public:
-    FileHandler() = default;
+    LocalSystemHandler(P2PNode);
 
+    // dodaje do katalogu roboczego ale nie uploaduje
+    FileOperationResult addFileToWorkspace(std::string);
+    // usuwa plik z workspace, jesli taki istnieje
+    FileOperationResult removeFileFromWorkspace(std::string);
+    // uploaduje plik, jesli jest w workspace
     FileOperationResult addFileToSystem(std::string);
+    // usuwa plik z systemu, ale nie z workspace
+    FileOperationResult removeFileFromSystem(std::string);
+    // ustawia workspace
     DirOperationResult setWorkspacePath(std::string);
+    // pokazuje pliki lokalne
+    void showLocalFiles();
 
 };
-#endif //TINY_FILEHANDLER_H
+#endif //TINY_LOCALSYSTEMHANDLER_H
