@@ -1,43 +1,100 @@
 
 #include "../include/UserRequestHandler.h"
 
-void UserRequestHandler::processRequest(std::string request) {
+RequestResult UserRequestHandler::processRequest(const std::string& request) {
 
-    // logike podepne potem
-    std::cout << "wybrano " + request + "\n";
-    return;
+    if(request == "ls-workspace") {
+        DirOperationResult  dirRet = systemHandler.showWorkspaceFiles();
+
+        if(dirRet != DIR_SUCCESS) {
+            std::cout << "Nie mozna wykonac operacji " << request << "\n";
+            return REQUEST_FAILURE;
+        }
+        return REQUEST_SUCCESS;
+    }
+
+    FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
+
+    if(request == "ls-my") {
+        ret = systemHandler.showLocalFiles();
+
+    } else if(request == "ls") {
+        ret = systemHandler.showGlobalFiles(WO_OWNER);
+
+    } else if(request == "ls-owner") {
+        ret = systemHandler.showGlobalFiles(W_OWNER);
+    }
+
+    if(ret != FILE_SUCCESS) {
+        std::cout << "Polecenie " << request << " nie zostalo wykonane\n";
+        return REQUEST_FAILURE;
+    }
+
+    return REQUEST_SUCCESS;
 }
 
-void UserRequestHandler::processRequest(std::string requestPrefix, std::string requestSufix) {
+RequestResult UserRequestHandler::processRequest(const std::string& requestPrefix, const std::string& requestSufix) {
 
-    // logike podepne potem
-    std::cout << "wybrano " + requestPrefix + " " + requestSufix + "\n";
-    return;
+    // jesli operacja dotyczy katalogu
+    if(requestPrefix == "set-workspace") {
+        DirOperationResult dirRet = systemHandler.setWorkspacePath(requestSufix);
+
+        if(dirRet != DIR_SUCCESS) {
+            std::cout << "Nie mozna wykonac operacji " << requestPrefix << "\n";
+            return REQUEST_FAILURE;
+        }
+        return REQUEST_SUCCESS;
+    }
+
+    FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
+
+    if(requestPrefix == "get") {
+        ret = systemHandler.download(requestSufix);
+
+    } else if(requestPrefix == "add") {
+        ret = systemHandler.addFileToWorkspace(requestSufix);
+
+    } else if(requestPrefix == "put") {
+        ret = systemHandler.upload(requestSufix);
+
+    } else if(requestPrefix == "sys-rm") {
+        ret = systemHandler.removeFileFromSystem(requestSufix);
+
+    } else if(requestPrefix == "full-rm") {
+        ret = systemHandler.removeFileFromWorkspace(requestSufix);
+    }
+
+    if(ret != FILE_SUCCESS) {
+        std::cout << "Nie udalo sie wykonac polecenia " << requestPrefix << "\n";
+        return REQUEST_FAILURE;
+    }
+
+    return REQUEST_SUCCESS;
 }
 
 void UserRequestHandler::printHelp() {
     
     std::cout << "Lista komend:\n";
-    std::cout << "lls\twyswietlanie zasobow lokalnych\n";
-    std::cout << "ls\twyswietlanie zasobow globalnych\n";
-    std::cout << "ls-owners\twyswietlanie zasobow globalnych razem z wlascicielem\n";
-    std::cout << "get [nazwa_pliku]\tpobranie pilku";
-    std::cout << "set-workspace [sciezka_do_folderu_roboczego\ttworzy folder roboczy\n";
-    std::cout << "add [sciezka_do_pliku]/[nazwa_pliku]]\tdodanie pliku do folderu roboczego\n";
-    std::cout << "put [nazwa_pliku]\tdodanie pliku do systemu\n";
-    std::cout << "sys-rm [nazwa_pliku]\tusuwa plik z systemu\n";
-    std::cout << "full-rm [nazwa_pliku\tusuwa plik z systemu i folderu roboczego\n";
+    std::cout << "ls                                            \twyswietlanie zasobow globalnych\n";
+    std::cout << "ls-owners                                     \twyswietlanie zasobow globalnych razem z wlascicielem\n";
+    std::cout << "ls-workspace                                  \twyswietlanie plikow w folderze roboczym\n";
+    std::cout << "ls-my                                         \twyswietlanie plikow w systemie, ktorych jestes wlascicielem\n";
+    std::cout << "get [nazwa_pliku]                             \tpobranie pilku\n";
+    std::cout << "set-workspace [sciezka_do_folderu_roboczego]  \ttworzy folder roboczy\n";
+    std::cout << "add [sciezka_do_pliku]/[nazwa_pliku]          \tdodanie pliku do folderu roboczego\n";
+    std::cout << "put [nazwa_pliku]                             \tdodanie pliku do systemu\n";
+    std::cout << "sys-rm [nazwa_pliku]                          \tusuwa plik z systemu\n";
+    std::cout << "full-rm [nazwa_pliku                          \tusuwa plik z systemu i folderu roboczego\n";
 }
 
-void UserRequestHandler::receiveRequest() {
+void UserRequestHandler::waitForRequest() {
 
     printHelp();
-
     // dzieki std::ws nie mamy bialych znakow na poczatku wiersza
     for(std::string userInput; getline(std::cin>>std::ws, userInput, '\n');) {
 
-        std::string requestPrefix = "";
-        std::string requestSufix = "";
+        std::string requestPrefix;
+        std::string requestSufix;
 
         RequestType requestType = preprocessRequest(userInput, requestPrefix, requestSufix);
 
@@ -47,11 +104,17 @@ void UserRequestHandler::receiveRequest() {
             continue;
         }
 
+        RequestResult requestRet = REQUEST_FAILURE;
+
         if(requestType == SINGLE_REQUEST) {
-            processRequest(requestPrefix);
+            requestRet = processRequest(requestPrefix);
 
         } else if(requestType == DOUBLE_REQUEST){
-            processRequest(requestPrefix, requestSufix);
+            requestRet = processRequest(requestPrefix, requestSufix);
+        }
+
+        if(requestRet != REQUEST_SUCCESS) {
+            printHelp();
         }
     }
 }
@@ -78,10 +141,10 @@ RequestType UserRequestHandler::preprocessRequest(std::string userInput, std::st
     }
 
     // jesli poczatek przerwy jest w srodku slowa, szukam konca przerwy
-    const size_t secondWordBegin(userInput.find_last_of(whitespace));
+    const size_t breakEnd(userInput.find_last_of(whitespace));
 
     // sprawdzam czy przerwa zawiera tylko biale znaki
-    for(size_t i = firstWordEnd; i <= secondWordBegin; i++) {
+    for(size_t i = firstWordEnd; i <= breakEnd; i++) {
         if(userInput[i] != ' ') {
             return NOT_A_REQUEST;
         }
@@ -93,7 +156,7 @@ RequestType UserRequestHandler::preprocessRequest(std::string userInput, std::st
     if(std::find(doubleCommandsPrefix.begin(), doubleCommandsPrefix.end(), firstWord)
         != doubleCommandsPrefix.end()){
         requestPrefix = firstWord;
-        requestSufix = userInput.substr(secondWordBegin, userInput.size());
+        requestSufix = userInput.substr(breakEnd + 1, userInput.size());
         return DOUBLE_REQUEST;
     }
 
@@ -102,4 +165,8 @@ RequestType UserRequestHandler::preprocessRequest(std::string userInput, std::st
 
 void UserRequestHandler::printErrorMessage() {
     std::cout << "Nieznana komenda - wybierz jedna z ponizszych\n";
+}
+
+UserRequestHandler::UserRequestHandler(const LocalSystemHandler &systemHandler) : systemHandler(systemHandler) {
+
 }

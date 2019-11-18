@@ -12,6 +12,7 @@
  * bedzie wieksza czytelnosc jesli uzyjemy enum
  */
 enum ActionResult {
+    ACTION_NOT_HANDLED = -1,
     ACTION_SUCCESS = 0,
     ACTION_FAILURE = 1,
 };
@@ -19,13 +20,12 @@ enum ActionResult {
 class P2PNode {
 
 private:
-
     std::string name;
     P2PFiles globalFiles;
     P2PRecord localFiles;
 
 public:
-    P2PNode(const std::string name);
+    explicit P2PNode(const std::string&);
     // uniewaznia plik
     ActionResult revoke(std::string);
     // pokazuje pliki w sytemie
@@ -35,11 +35,12 @@ public:
     // rozglasza informacje o plikach lokalnych co dana liczbe sekund
     ActionResult BroadcastFilesFrequently(double);
     // rozglasza pliki po zmianie
-    ActionResult BroadcastFiles();
-    // sciaga plik
-    ActionResult downloadFile(std::string);
-    // upload file
+    ActionResult broadcastFiles();
+    // sciaga plik o zadanej nazwie
+    ActionResult downloadFile(const std::string&);
+    // uploaduje plik
     ActionResult uploadFile(std::string);
-    void showLocalFiles();
+    // pokazuje pliki lokalne
+    ActionResult showLocalFiles();
 };
 #endif //TINY_P2PNODE_H
