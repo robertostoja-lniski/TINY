@@ -15,10 +15,13 @@
 // do przechodzenia po plikach powinien sluzyc iterator, (lub petla for each)
 
 enum RecordOperationResult{
-
     SUCCESS = 0,
     FILE_NOT_FOUND = 1,
+};
 
+enum AddFileResult {
+    ADD_SUCCESS = 0,
+    ADD_ALREADY_EXISTS = 1,
 };
 class P2PRecord {
 
@@ -26,7 +29,7 @@ private:
     std::set< File > fileSet;
 
 public:
-    void addFile(File);
+    AddFileResult addFile(File);
     RecordOperationResult removeFile(File);
     // potem dodam przeciazony operator
     void print();

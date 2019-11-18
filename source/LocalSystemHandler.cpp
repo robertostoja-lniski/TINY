@@ -164,14 +164,19 @@ FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
         return FILE_NOT_REGULAR_FILE;
     }
 
-    if(p2PNode.uploadFile(fileToAdd) != ACTION_SUCCESS) {
+    ActionResult ret = p2PNode.uploadFile(fileToAdd);
+    if(ret == ACTION_NO_EFFECT) {
+        std::cout << "Plik " << fileToAdd << " juz istnial w systemie\n";
+        return FILE_SUCCESS;
+
+    } else if(ret != ACTION_SUCCESS){
         return FILE_CANNOT_ADD_TO_SYSTEM;
     }
 
     // dodaje informacje do pliku konfiguracyjnego
     // o tym, ze plik zostanie udostepniony
-    updateConfig(fileToAdd, CONFIG_ADD);
 
+    updateConfig(fileToAdd, CONFIG_ADD);
     std::cout << "Plik " << fileToAdd << " zostal dodany do systemu\n";
     p2PNode.broadcastFiles();
     return FILE_SUCCESS;
