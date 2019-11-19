@@ -10,7 +10,7 @@ LocalSystemHandler::LocalSystemHandler(P2PNode p2PNode) : p2PNode(p2PNode) {
  * API wzialem z
  * https://thispointer.com/c-check-if-given-path-is-a-file-or-directory-using-boost-c17-filesystem-library/
  */
-FileOperationResult LocalSystemHandler::addFileToWorkspace(std::string filepath) {
+FileOperationResult LocalSystemHandler::put(std::string filepath) {
 
     // sciezki powinne rozrozniac uzytkownikow
     // inne nie powinny byc akceptowane
@@ -46,45 +46,18 @@ FileOperationResult LocalSystemHandler::addFileToWorkspace(std::string filepath)
         filename = filename.erase(0, cut_index + 1);
     }
     
-    if(link(filepath.c_str(), (workspaceUpperDirPath + filename).c_str()) != 0) {
+    if(link(filepath.c_str(), (workspaceUpperDirPath + workspaceDirName + filename).c_str()) != 0) {
         std::cout << "Link sie nie powiodl, plik o takiej nazwie juz istnieje\n";
         return FILE_LINK_ERROR;
     }
 
-    std::cout << filename << " jest dodany do folderu roboczego\n";
+    // dodaj do systemu
+    FileOperationResult ret = upload(filename);
+    if(ret != FILE_SUCCESS) {
+        return ret;
+    }
+
     return FILE_SUCCESS;
-}
-
-DirOperationResult LocalSystemHandler::setWorkspacePath(std::string workspacePrefix) {
-
-    if(!filesys::exists(workspacePrefix)) {
-        std::cout << "Nieistniejaca sciezka\n";
-        return DIR_PREFIX_TO_NOWHERE;
-    }
-
-    if(!filesys::is_directory(workspacePrefix)) {
-        std::cout << "To nie sciezka do folderu\n";
-        return DIR_PREFIX_TO_NOT_DIRECTORY;
-    }
-
-    std::string fullWorkspacePath = workspacePrefix + workspaceDirName;
-
-    // if workspace exists it is treated as success
-    if(filesys::exists(fullWorkspacePath)) {
-        std::cout << "Folder roboczy " << fullWorkspacePath << " juz istnieje\n";
-        workspaceUpperDirPath = fullWorkspacePath + "/";
-        return DIR_SUCCESS;
-    }
-
-    if(mkdir(fullWorkspacePath.c_str(), S_IRWXU) != 0 ){
-        std::cout << "Nie mozna stowrzyc katalogu\n";
-        return DIR_CANNOT_CREATE;
-    }
-
-    std::cout << "Utworzono folder roboczy: " << fullWorkspacePath << "\n";
-    workspaceUpperDirPath = fullWorkspacePath;
-
-    return  DIR_SUCCESS;
 }
 
 FileOperationResult LocalSystemHandler::showLocalFiles() {
@@ -94,7 +67,7 @@ FileOperationResult LocalSystemHandler::showLocalFiles() {
     }
 }
 
-FileOperationResult LocalSystemHandler::removeFileFromWorkspace(std::string fileToRemove) {
+FileOperationResult LocalSystemHandler::removeFile(std::string fileToRemove) {
 
     FileOperationResult ret = removeFileFromSystem(fileToRemove);
     if( ret != FILE_SUCCESS){
@@ -102,7 +75,7 @@ FileOperationResult LocalSystemHandler::removeFileFromWorkspace(std::string file
         return ret;
     }
 
-    std::string fullPathToFile = workspaceUpperDirPath + fileToRemove;
+    std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + fileToRemove;
     // w przeciwnym wypadku usuwa plik z folderu
 
     if(p2PNode.revoke(fileToRemove) != ACTION_SUCCESS) {
@@ -118,13 +91,13 @@ FileOperationResult LocalSystemHandler::removeFileFromWorkspace(std::string file
     }
 
     // usuwa z pliku konfiguracyjnego
-    std::cout << "Plik " << fileToRemove << " zostal usuniety z folderu roboczego ( i z systemu )\n";
+    std::cout << "Dowiazanie do pliku zostalo usuniete \n";
     return FILE_SUCCESS;
 }
 
 FileOperationResult LocalSystemHandler::removeFileFromSystem(std::string fileToRevoke) {
 
-    std::string fullPathToFile = workspaceUpperDirPath + fileToRevoke;
+    std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + fileToRevoke;
     if(!filesys::exists(fullPathToFile)) {
         std::cout << "Nieistniejaca sciezka\n";
         return FILE_DOES_NOT_EXIST;
@@ -153,6 +126,7 @@ FileOperationResult LocalSystemHandler::removeFileFromSystem(std::string fileToR
 
 FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
 
+    // na wszelki wypadek sprawdz, czy plik dalej istnieje
     std::string fullPathToFile = workspaceUpperDirPath + fileToAdd;
     if(!filesys::exists(fullPathToFile)) {
         std::cout << "Nieistniejaca sciezka\n";
@@ -165,6 +139,7 @@ FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
     }
 
     ActionResult ret = p2PNode.uploadFile(fileToAdd);
+
     if(ret == ACTION_NO_EFFECT) {
         std::cout << "Plik " << fileToAdd << " juz istnial w systemie\n";
         return FILE_SUCCESS;
@@ -190,31 +165,6 @@ FileOperationResult LocalSystemHandler::showGlobalFiles(bool printOwner) {
     return FILE_OPERATION_NOT_HANDLED;
 }
 
-DirOperationResult LocalSystemHandler::showWorkspaceFiles() {
-
-    std::string fullWorkspacePath = workspaceUpperDirPath + workspaceDirName;
-
-    if(!filesys::exists(fullWorkspacePath)) {
-        std::cout << "Folder roboczy nie istnieje!\n";
-        return DIR_PREFIX_TO_NOWHERE;
-    }
-
-    if(!filesys::is_directory(fullWorkspacePath)) {
-        std::cout << "Blad folderu roboczego\n";
-        return DIR_PREFIX_TO_NOT_DIRECTORY;
-    }
-
-    for(const auto & file : filesys::directory_iterator(fullWorkspacePath)){
-        // nie pokazuj plikow konfiguracyjnych
-        if(file.path() != fullWorkspacePath + configFileName &&
-            file.path() != fullWorkspacePath + ".tmp" + configFileName) {
-
-            std::cout << file.path() << "\n";
-        }
-    }
-    return DIR_SUCCESS;
-}
-
 DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
 
     size_t maxUserNameLen = 32;
@@ -225,19 +175,22 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
         return DIR_CANNOT_FIND_WORKSPACE_USER;
     }
 
-    std::string workspacePathSufix(linuxName);
-    std::string defaultWorkspacePath = "/home/" + workspacePathSufix + "/";
+    std::string user(linuxName);
+    std::string defaultWorkspacePath = "/home/" + user + "/";
 
-    if(!filesys::exists(defaultWorkspacePath)) {
-        std::cout << "Nie udalo sie ustawic domyslnego folderu roboczego\n";
-        return DIR_PREFIX_TO_NOWHERE;
+    // if workspace exists it is treated as success
+    if(filesys::exists(defaultWorkspacePath)) {
+        std::cout << "Folder roboczy " << defaultWorkspacePath << " juz istnieje\n";
+        workspaceUpperDirPath = defaultWorkspacePath;
+        return DIR_SUCCESS;
     }
 
-    if(!filesys::is_directory(defaultWorkspacePath)) {
-        std::cout << "Nie udalo sie ustawic domyslnego folderu roboczego\n";
-        return DIR_PREFIX_TO_NOT_DIRECTORY;
+    if(mkdir(defaultWorkspacePath.c_str(), S_IRWXU) != 0 ){
+        std::cout << "Nie mozna stowrzyc katalogu\n";
+        return DIR_CANNOT_CREATE;
     }
 
+    std::cout << "Utworzono folder roboczy: " << defaultWorkspacePath << "\n";
     workspaceUpperDirPath = defaultWorkspacePath;
 
     return DIR_CANNOT_CREATE;
@@ -267,7 +220,7 @@ FileOperationResult LocalSystemHandler::restorePreviousState() {
     std::string fileName;
 
     // otwiera plik i iteruje po nim
-    configFile.open(fullConfigFilePath, std::ios::out);
+    configFile.open(fullConfigFilePath, std::ios::in);
 
     while(std::getline(infile, configRecord)) {
 
@@ -276,8 +229,11 @@ FileOperationResult LocalSystemHandler::restorePreviousState() {
             return FILE_CANNOT_READ;
         }
 
+        std::cout << fileName << "\n";
         p2PNode.uploadFile(fileName);
     }
+
+    configFile.close();
 
 }
 
@@ -328,7 +284,7 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
             }
 
             if(fileName != name) {
-                configFile << name << "\n";
+                configFile << fileName << "\n";
             }
         }
 

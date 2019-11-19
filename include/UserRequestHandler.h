@@ -32,8 +32,8 @@ class UserRequestHandler{
 private:
     // skorzystalem z wektora, poniewaz tablica musi miec podana dlugosc
     // przy deklaracji, a chcialem ograniczyc dodawanie kolejnych oznaczen
-    const std::vector<std::string> singleCommands = {"ls-my", "ls", "ls-owners", "ls-workspace"};
-    const std::vector<std::string> doubleCommandsPrefix = {"get", "set-workspace", "add", "put", "sys-rm", "full-rm"};
+    const std::vector<std::string> singleCommands = {"ls-my", "ls", "ls-owners"};
+    const std::vector<std::string> doubleCommandsPrefix = {"get", "add", "put", "rm"};
     LocalSystemHandler systemHandler;
     /*
      *  sprawdza czy pierwszy parametr jest poleceniem

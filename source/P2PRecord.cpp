@@ -25,7 +25,6 @@ RecordOperationResult P2PRecord::removeFile(File file) {
     auto pos = fileSet.find(file);
 
     if( pos == fileSet.end()) {
-        std::cout << "Plik " << file.getName() << " nie istnieje w systemie\n";
         return FILE_NOT_FOUND;
     }
 
