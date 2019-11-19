@@ -3,16 +3,6 @@
 
 RequestResult UserRequestHandler::processRequest(const std::string& request) {
 
-    if(request == "ls-workspace") {
-        DirOperationResult  dirRet = systemHandler.showWorkspaceFiles();
-
-        if(dirRet != DIR_SUCCESS) {
-            std::cout << "Nie mozna wykonac operacji " << request << "\n";
-            return REQUEST_FAILURE;
-        }
-        return REQUEST_SUCCESS;
-    }
-
     FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
 
     if(request == "ls-my") {
@@ -35,33 +25,16 @@ RequestResult UserRequestHandler::processRequest(const std::string& request) {
 
 RequestResult UserRequestHandler::processRequest(const std::string& requestPrefix, const std::string& requestSufix) {
 
-    // jesli operacja dotyczy katalogu
-    if(requestPrefix == "set-workspace") {
-        DirOperationResult dirRet = systemHandler.setWorkspacePath(requestSufix);
-
-        if(dirRet != DIR_SUCCESS) {
-            std::cout << "Nie mozna wykonac operacji " << requestPrefix << "\n";
-            return REQUEST_FAILURE;
-        }
-        return REQUEST_SUCCESS;
-    }
-
     FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
 
     if(requestPrefix == "get") {
         ret = systemHandler.download(requestSufix);
 
-    } else if(requestPrefix == "add") {
-        ret = systemHandler.addFileToWorkspace(requestSufix);
-
     } else if(requestPrefix == "put") {
-        ret = systemHandler.upload(requestSufix);
+        ret = systemHandler.put(requestSufix);
 
-    } else if(requestPrefix == "sys-rm") {
-        ret = systemHandler.removeFileFromSystem(requestSufix);
-
-    } else if(requestPrefix == "full-rm") {
-        ret = systemHandler.removeFileFromWorkspace(requestSufix);
+    } else if(requestPrefix == "rm") {
+        ret = systemHandler.removeFile(requestSufix);
     }
 
     if(ret != FILE_SUCCESS) {
@@ -77,14 +50,10 @@ void UserRequestHandler::printHelp() {
     std::cout << "Lista komend:\n";
     std::cout << "ls                                            \twyswietlanie zasobow globalnych\n";
     std::cout << "ls-owners                                     \twyswietlanie zasobow globalnych razem z wlascicielem\n";
-    std::cout << "ls-workspace                                  \twyswietlanie plikow w folderze roboczym\n";
     std::cout << "ls-my                                         \twyswietlanie plikow w systemie, ktorych jestes wlascicielem\n";
     std::cout << "get [nazwa_pliku]                             \tpobranie pilku\n";
-    std::cout << "set-workspace [sciezka_do_folderu_roboczego]  \ttworzy folder roboczy\n";
-    std::cout << "add [sciezka_do_pliku]/[nazwa_pliku]          \tdodanie pliku do folderu roboczego\n";
-    std::cout << "put [nazwa_pliku]                             \tdodanie pliku do systemu\n";
-    std::cout << "sys-rm [nazwa_pliku]                          \tusuwa plik z systemu\n";
-    std::cout << "full-rm [nazwa_pliku                          \tusuwa plik z systemu i folderu roboczego\n";
+    std::cout << "put [sciezka_do_pliku]/[nazwa_pliku]          \tdodanie pliku do systemu\n";
+    std::cout << "rm [nazwa_pliku]                              \tusuwa plik z systemu\n";
 }
 
 void UserRequestHandler::waitForRequest() {

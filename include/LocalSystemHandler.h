@@ -60,6 +60,8 @@ private:
     FileOperationResult restorePreviousState();
     // nadpisuje konfiguracje po wprowadzeniu zmian
     FileOperationResult updateConfig(const std::string&, ConfigOperation);
+    // uploaduje plik, jesli jest w workspace
+    FileOperationResult upload(std::string);
 
 public:
     LocalSystemHandler(P2PNode);
@@ -68,21 +70,14 @@ public:
     FileOperationResult showLocalFiles();
     // wyswietla zasoby globalne z wlascicielami, lub bez
     FileOperationResult showGlobalFiles(bool);
-
     // pobiera plik ( jesli mozliwe to rownolegle z kilku zrodel )
     FileOperationResult download(std::string);
-    // ustawia workspace
-    DirOperationResult setWorkspacePath(std::string);
-    // dodaje do katalogu roboczego ale nie uploaduje
-    FileOperationResult addFileToWorkspace(std::string);
-    // uploaduje plik, jesli jest w workspace
-    FileOperationResult upload(std::string);
+    // dodaje do katalogu roboczego, a nastepnie uploaduje
+    FileOperationResult put(std::string);
     // usuwa plik z systemu, ale nie z workspace
     FileOperationResult removeFileFromSystem(std::string);
     // usuwa plik z workspace, jesli taki istnieje
-    FileOperationResult removeFileFromWorkspace(std::string);
-    // ls w folderze roboczym
-    DirOperationResult showWorkspaceFiles();
+    FileOperationResult removeFile(std::string);
 
 };
 #endif //TINY_LOCALSYSTEMHANDLER_H
