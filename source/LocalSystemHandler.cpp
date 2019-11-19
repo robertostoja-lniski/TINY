@@ -15,8 +15,12 @@ FileOperationResult LocalSystemHandler::put(std::string filepath) {
     // sciezki powinne rozrozniac uzytkownikow
     // inne nie powinny byc akceptowane
     if(filepath[0] == '~') {
-        std::cout << "Zamien ~ na pelna sciezke\n";
-        return FILE_HOMEPATH_BROKEN;
+
+        std::string user;
+        if(getUserName(user) != GET_USER_SUCCESS){
+            return FILE_HOMEPATH_BROKEN;
+        }
+        filepath = "/home/" + user + filepath.substr(1, filepath.size());
     }
 
     if(!filesys::exists(filepath)) {
@@ -167,20 +171,15 @@ FileOperationResult LocalSystemHandler::showGlobalFiles(bool printOwner) {
 
 DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
 
-    size_t maxUserNameLen = 32;
-    char linuxName[maxUserNameLen];
-
-    if(getlogin_r(linuxName, maxUserNameLen)){
-        std::cout << "Nie udalo sie ustawic domyslnego folderu roboczego\n";
+    std::string user;
+    if(getUserName(user) != GET_USER_SUCCESS) {
         return DIR_CANNOT_FIND_WORKSPACE_USER;
     }
 
-    std::string user(linuxName);
     std::string defaultWorkspacePath = "/home/" + user + "/";
 
     // if workspace exists it is treated as success
     if(filesys::exists(defaultWorkspacePath)) {
-        std::cout << "Folder roboczy " << defaultWorkspacePath << " juz istnieje\n";
         workspaceUpperDirPath = defaultWorkspacePath;
         return DIR_SUCCESS;
     }
@@ -229,7 +228,6 @@ FileOperationResult LocalSystemHandler::restorePreviousState() {
             return FILE_CANNOT_READ;
         }
 
-        std::cout << fileName << "\n";
         p2PNode.uploadFile(fileName);
     }
 
@@ -303,6 +301,21 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
         }
     }
     return FILE_SUCCESS;
+}
+
+GetUser LocalSystemHandler::getUserName(std::string &user) {
+
+    size_t maxUserNameLen = 32;
+    char linuxName[maxUserNameLen];
+
+    if(getlogin_r(linuxName, maxUserNameLen)){
+        std::cout << "Nie udalo sie ustawic domyslnego folderu roboczego\n";
+        return GET_USER_FAIL;
+    }
+
+    std::string tmp(linuxName);
+    user = tmp;
+    return GET_USER_SUCCESS;
 }
 
 
