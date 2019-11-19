@@ -43,6 +43,12 @@ enum ConfigOperation{
     CONFIG_ADD = 0,
     CONFIG_REMOVE = 1,
 };
+
+enum GetUser {
+    GET_USER_SUCCESS = 0,
+    GET_USER_FAIL = 1,
+};
+
 class LocalSystemHandler{
 
 private:
@@ -62,7 +68,8 @@ private:
     FileOperationResult updateConfig(const std::string&, ConfigOperation);
     // uploaduje plik, jesli jest w workspace
     FileOperationResult upload(std::string);
-
+    // zwraca nazwe uzytkownika
+    GetUser getUserName(std::string&);
 public:
     LocalSystemHandler(P2PNode);
     // tylko do oczytu
