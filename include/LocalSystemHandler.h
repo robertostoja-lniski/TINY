@@ -4,14 +4,13 @@
 #include <string>
 #include <iostream>
 #include <boost/filesystem.hpp>
-#include <filesystem>
+#include <experimental/filesystem>
 #include "P2PNode.h"
 #include <sys/stat.h>
 #include <unistd.h>
-#include <sstream>
 
 // zeby sprawdzic poprawnosc sciezek do pliku
-namespace filesys = boost::filesystem;
+namespace filesys = std::experimental::filesystem;
 
 enum FileOperationResult {
     FILE_OPERATION_NOT_HANDLED = -1,
