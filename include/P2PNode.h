@@ -5,11 +5,10 @@
 #include "P2PRecord.h"
 #include "P2PFiles.h"
 
-/*
- * mysle ze lepiej dac jednakowy zwracany enum
- * dla kilku metod zamiast zwracac inta,
- * przy sprawdzaniu poprawnosci wykonania zadania
- * bedzie wieksza czytelnosc jesli uzyjemy enum
+/**
+ * @enum
+ * Rezultat akcji wykonywanej przez P2PNode
+ * @see P2PNode
  */
 enum ActionResult {
     ACTION_NOT_HANDLED = -1,
@@ -18,30 +17,48 @@ enum ActionResult {
     ACTION_FAILURE = 2,
 };
 
+/**
+ * @class
+ * Reprezentuje węzeł sieci P2P.
+ * @implements wzorzec projektowy singleton
+ */
 class P2PNode {
 
 private:
+    /// Nazwa węzła. Jest to nazwa użytkownika systemu UNIX.
     std::string name;
+
+    /// Pliki globalne całego systemu, których nazwy są pobierane przez UDP.
     P2PFiles globalFiles;
+
+    /// Pliki lokalne.
     P2PRecord localFiles;
 
 public:
     explicit P2PNode(const std::string&);
-    // uniewaznia plik
+
+    /// Unieważnia plik, którego jest właścicielem. Rozsyła komunikat o unieważnieniu do wszystkich.
     ActionResult revoke(std::string);
-    // pokazuje pliki w sytemie
-    ActionResult showGlobalFiles(void);
-    // zmienia tablice lokalnych plikow jesli pojawil sie nowy
-    ActionResult updateLocalFiles(void);
-    // rozglasza informacje o plikach lokalnych co dana liczbe sekund
+
+    /// Pokazuje listę globalnych plików w systemie.
+    ActionResult showGlobalFiles();
+
+    /// Zmienia tablicę lokalnych plików. Pobiera informacje z ukrytego katalogu i pliku konfiguracyjnego.
+    ActionResult updateLocalFiles();
+
+    /// Rozgłasza informacje o plikach lokalnych co daną liczbę sekund w osobnym wątku.
     ActionResult BroadcastFilesFrequently(double);
-    // rozglasza pliki po zmianie
+
+    /// Rozgłasza pliki do wszystkich węzłów
     ActionResult broadcastFiles();
-    // sciaga plik o zadanej nazwie
+
+    /// Pobiera plik o zadanej nazwie
     ActionResult downloadFile(const std::string&);
-    // uploaduje plik
+
+    /// Wrzuca plik do lokalnego systemu
     ActionResult uploadFile(std::string);
-    // pokazuje pliki lokalne
+
+    /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();
 };
 #endif //TINY_P2PNODE_H
