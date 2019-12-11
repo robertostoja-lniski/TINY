@@ -33,6 +33,15 @@ public:
     RecordOperationResult removeFile(File);
     // potem dodam przeciazony operator
     void print();
+
+    /**
+     * @author Wojciech
+     * Zwraca wektor komunikatów broadcastowych.
+     * Są one później po kolei wysyłane
+     * @return wektor par {ilość plików, treść (pliki)}
+     * TODO synchronizuj
+     */
+    std::vector<std::pair<size_t, std::string>> getBroadcastCommunicates();
 };
 
 

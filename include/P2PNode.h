@@ -18,6 +18,11 @@ enum ActionResult {
     ACTION_FAILURE = 2,
 };
 
+/// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
+enum UDPCommunicateType{
+    UDP_BROADCAST = 0,
+    UDP_REVOKE = 1,
+};
 class P2PNode {
 
 private:
@@ -25,6 +30,10 @@ private:
     P2PFiles globalFiles;
     P2PRecord localFiles;
 
+    int broadcastSocketFd = -1;
+
+    /// Inicjalizuje gniazdo do rozgłaszania
+    ActionResult prepareForBroadcast();
 public:
     explicit P2PNode(const std::string&);
     // uniewaznia plik
@@ -43,5 +52,8 @@ public:
     ActionResult uploadFile(std::string);
     // pokazuje pliki lokalne
     ActionResult showLocalFiles();
+
+    /// Destructor
+    virtual ~P2PNode();
 };
 #endif //TINY_P2PNODE_H

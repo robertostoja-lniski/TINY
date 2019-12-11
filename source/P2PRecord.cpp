@@ -1,3 +1,8 @@
+
+#include <P2PRecord.h>
+#include <P2PNode.h>
+#include <vector>
+
 #include "../include/P2PRecord.h"
 
 AddFileResult P2PRecord::addFile(File file) {
@@ -31,3 +36,25 @@ RecordOperationResult P2PRecord::removeFile(File file) {
     fileSet.erase(file);
     return SUCCESS;
 }
+
+std::vector<std::pair<size_t, std::string>> P2PRecord::getBroadcastCommunicates() {
+    // maksymalna ilość plików w jednym komunikacie = 253
+    std::vector<std::pair<size_t, std::string>> vector;
+
+    size_t currentCommunicateSize = 0;
+    std::string currentCommunicateString = "";
+    for(auto file: fileSet){
+        currentCommunicateString += file.getName() + '\t' + file.getOwner() + '\n';
+        // jeśli przekroczono limit liczby plików
+        if(++currentCommunicateSize == 253){
+            vector.push_back(std::make_pair(currentCommunicateSize, currentCommunicateString));
+            currentCommunicateSize = 0;
+            currentCommunicateString = "";
+        }
+    }
+    if(currentCommunicateSize != 0){
+        vector.push_back(std::make_pair(currentCommunicateSize, currentCommunicateString));
+    }
+    return vector;
+}
+
