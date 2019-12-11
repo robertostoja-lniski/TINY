@@ -11,32 +11,43 @@
 #include <algorithm>
 #include "LocalSystemHandler.h"
 
+/// @enum typ zapytania
 enum RequestType{
     NOT_A_REQUEST = -1,
     SINGLE_REQUEST = 0,
     DOUBLE_REQUEST = 1,
 };
 
+/// @enum rezultat zapytania
 enum RequestResult{
     REQUEST_SUCCESS = 0,
     REQUEST_FAILURE = 1,
 };
 
-// dla wo_owner nie wyswietla wlascicieli plikow
+/// @enum typ wypisywania
 enum LsType{
-    WO_OWNER = 0,
-    W_OWNER = 1,
+    WO_OWNER = 0, /// nie wyświetla właścicieli plików
+    W_OWNER = 1,  ///     wyświetla właścicieli plików
 };
+
+/** @class
+ * Obsługuje zapytania użytkownika.
+ * @author Robert
+ */
 class UserRequestHandler{
 
 private:
-    // skorzystalem z wektora, poniewaz tablica musi miec podana dlugosc
-    // przy deklaracji, a chcialem ograniczyc dodawanie kolejnych oznaczen
+
+    /// Pojedyncze komendy - vector użyty w celu uproszczenia deklaracji
     const std::vector<std::string> singleCommands = {"ls-my", "ls", "ls-owners"};
+
+    /// Podwójne komendy
     const std::vector<std::string> doubleCommandsPrefix = {"get", "add", "put", "rm"};
-    LocalSystemHandler systemHandler;
-    /*
-     *  sprawdza czy pierwszy parametr jest poleceniem
+
+    /// Lokalny kontroler systemu
+    LocalSystemHandler localSystemHandler;
+    /**
+     *  Sprawdza czy pierwszy parametr jest poleceniem
      *  jesli tak, to zwaraca rodzaj polecania ( jedno, lub dwuargumentowe )
      *  i w zaleznosci od rodzaju modyfikuje argumenty wejsciowe,
      *  w taki sposob ze przypisane im sa oddzielne slowa polecenia
@@ -54,8 +65,10 @@ private:
     static void printErrorMessage();
 
 public:
+    /// Konstruktor
     explicit UserRequestHandler(const LocalSystemHandler &systemHandler);
-    // jedyne publiczne polecenie, odbiera komendy i je przetwarza
+
+    /// Odbiera komendy i je przetwarza
     void waitForRequest();
 };
 #endif //TINY_USERREQUESTHANDLER_H

@@ -10,9 +10,11 @@
 #include <unistd.h>
 #include <sstream>
 
-// zeby sprawdzic poprawnosc sciezek do pliku
+/// @namespace operacje na plikach.
+/// Potrzeba, żeby sprawdzic poprawnosc sciezek do pliku
 namespace filesys = boost::filesystem;
 
+/// @enum Rezultat operacji na plikach
 enum FileOperationResult {
     FILE_OPERATION_NOT_HANDLED = -1,
     FILE_SUCCESS = 0,
@@ -32,6 +34,7 @@ enum FileOperationResult {
     FILE_CANNOT_UPDATE_CONFIG = 14,
 };
 
+/// Rezultat operacji na katalogach
 enum DirOperationResult {
     DIR_SUCCESS = 0,
     DIR_PREFIX_TO_NOWHERE = 1,
@@ -40,51 +43,82 @@ enum DirOperationResult {
     DIR_CANNOT_FIND_WORKSPACE_USER = 4,
 };
 
+/// @enum Operacja konfiguracyjna
 enum ConfigOperation{
     CONFIG_ADD = 0,
     CONFIG_REMOVE = 1,
 };
 
+/// @enum Rezultat operacji pobrania użytkownika
 enum GetUser {
     GET_USER_SUCCESS = 0,
     GET_USER_FAIL = 1,
 };
 
+/**
+ * @class
+ * Zajmuje się operacjami na lokalnym systemie plików należących do systemu P2P.
+ */
 class LocalSystemHandler{
 
 private:
+    /// Nazwa katalogu roboczego systemu
     const std::string workspaceDirName = ".P2Pworkspace/";
+
+    /**
+     * Nazwa pliku konfiguracyjnego
+     * W pliku konfiguracyjnym jest spis plików, które zostały udostępnione.
+     */
     const std::string configFileName = ".p2P.config";
+
+    /// Nazwa katalogu nadrzędnego katalogu roboczego
     std::string workspaceUpperDirPath;
+
+    /// Węzeł lokalny
     P2PNode p2PNode;
 
+    /// Ustawia katalog roboczy użytkownika jako katalog główny systemu. (jeśli nie istnieje to tworzy go)
     DirOperationResult setDefaultWorkspace();
-    /*
-     * w pliku konfiguracyjnym jest spis plikow
-     * ktore zostaly udostepnione
-     */
-    // przywraca stan na podstawie pliku konfiguracyjnego
+
+    /// Przywraca stan na podstawie pliku konfiguracyjnego
     FileOperationResult restorePreviousState();
-    // nadpisuje konfiguracje po wprowadzeniu zmian
+
+    /// Nadpisuje konfigurację po wprowadzeniu zmian
     FileOperationResult updateConfig(const std::string&, ConfigOperation);
-    // uploaduje plik, jesli jest w workspace
+
+    /// Pobiera plik, jesli jest w workspace
     FileOperationResult upload(std::string);
-    // zwraca nazwe uzytkownika
+
+    /// Wypisuje na standardowe wyjście nazwę użytkownika
     GetUser getUserName(std::string&);
 public:
+    /// Konstruktor
     LocalSystemHandler(P2PNode);
     // tylko do oczytu
     // wyswietla zasoby lokalne
     FileOperationResult showLocalFiles();
-    // wyswietla zasoby globalne z wlascicielami, lub bez
+
+    /**
+     * Wyświetla zasoby globalne
+     * @param printOwners czy wyświetlić właścicieli
+     * //TODO
+     */
     FileOperationResult showGlobalFiles(bool);
-    // pobiera plik ( jesli mozliwe to rownolegle z kilku zrodel )
+
+    /**
+     * Pobiera plik z globalnych zasobów ( jesli mozliwe to rownolegle z kilku zrodel )
+     * @param fileName nazwa pliku do pobrania
+     * //TODO
+     */
     FileOperationResult download(std::string);
-    // dodaje do katalogu roboczego, a nastepnie uploaduje
+
+    /// Dodaje do katalogu roboczego, a następnie uploaduje plik do lokalnego setu
     FileOperationResult put(std::string);
-    // usuwa plik z systemu, ale nie z workspace
+
+    /// Usuwa plik z systemu, ale nie z workspace
     FileOperationResult removeFileFromSystem(std::string);
-    // usuwa plik z workspace, jesli taki istnieje
+
+    /// Usuwa plik z workspace, jesli taki istnieje
     FileOperationResult removeFile(std::string);
 
 };
