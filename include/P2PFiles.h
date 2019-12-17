@@ -12,14 +12,20 @@
 class P2PFiles {
 
 private:
+    /// Mapa rekordów setów plików z kluczem nazw
     std::map< std::string, P2PRecord > files;
-    // wykorzystywane do wypisywania
+
+    /// Wykorzystywane do wypisywania
+    /// @synchronized
     std::map< std::string, P2PRecord > getFiles() const;
 
 public:
-    // dostep powinien byc synchronizowany
+    /// Aktualizuj konkretny rekord
+    /// @synchronized
     void updateFiles(std::string name, P2PRecord newFiles);
-    // odczyt powinien byc synchronizowany
+
+    /// Pokaż wszystkie pliki
+    /// @synchronized
     void showFiles();
 };
 

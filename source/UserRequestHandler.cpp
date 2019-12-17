@@ -6,13 +6,13 @@ RequestResult UserRequestHandler::processRequest(const std::string& request) {
     FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
 
     if(request == "ls-my") {
-        ret = systemHandler.showLocalFiles();
+        ret = localSystemHandler.showLocalFiles();
 
     } else if(request == "ls") {
-        ret = systemHandler.showGlobalFiles(WO_OWNER);
+        ret = localSystemHandler.showGlobalFiles(WO_OWNER);
 
     } else if(request == "ls-owner") {
-        ret = systemHandler.showGlobalFiles(W_OWNER);
+        ret = localSystemHandler.showGlobalFiles(W_OWNER);
     }
 
     if(ret != FILE_SUCCESS) {
@@ -28,13 +28,13 @@ RequestResult UserRequestHandler::processRequest(const std::string& requestPrefi
     FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
 
     if(requestPrefix == "get") {
-        ret = systemHandler.download(requestSufix);
+        ret = localSystemHandler.download(requestSufix);
 
     } else if(requestPrefix == "put") {
-        ret = systemHandler.put(requestSufix);
+        ret = localSystemHandler.put(requestSufix);
 
     } else if(requestPrefix == "rm") {
-        ret = systemHandler.removeFile(requestSufix);
+        ret = localSystemHandler.removeFile(requestSufix);
     }
 
     if(ret != FILE_SUCCESS) {
@@ -136,6 +136,6 @@ void UserRequestHandler::printErrorMessage() {
     std::cout << "Nieznana komenda - wybierz jedna z ponizszych\n";
 }
 
-UserRequestHandler::UserRequestHandler(const LocalSystemHandler &systemHandler) : systemHandler(systemHandler) {
+UserRequestHandler::UserRequestHandler(const LocalSystemHandler &systemHandler) : localSystemHandler(systemHandler) {
 
 }
