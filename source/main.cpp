@@ -9,11 +9,11 @@
 #define EXAMPLE_FILENAME_IN_WORKSPACE "file.txt"
 int main() {
 
-    //singleton niezaimplementowany
-    P2PNode p2PNode(EXAMPLE_UNIQUE_NODE_NAME);
-    LocalSystemHandler systemHandler(p2PNode);
+    auto node = P2PNode::getInstance();
+    LocalSystemHandler systemHandler(node);
     UserRequestHandler requestHandler(systemHandler);
     requestHandler.waitForRequest();
 
+    delete &node;
     return 0;
 }

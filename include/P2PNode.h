@@ -34,10 +34,28 @@ private:
     /// Pliki lokalne.
     P2PRecord localFiles;
 
-public:
-    explicit P2PNode(const std::string&);
+    /// Mutex synchronizujący dostęp
+    static std::mutex singletonMutex;
 
-    /// Unieważnia plik, którego jest właścicielem. Rozsyła komunikat o unieważnieniu do wszystkich.
+    /// jedyny obiekt
+    static P2PNode *node;
+
+    /// PRYWATNE METODY
+
+
+    /// Prywatny kontruktor.
+    /// Jest wywoływany przez metodę P2PNode#getInstance
+    explicit P2PNode();
+
+    /// Ustawia pole name na UNIXową nazwę użytkownika węzła
+    static void setName();
+public:
+    /**
+     * @if obiekt nie istnieje @then tworzy obiekt.
+     * @return obiekt (singleton)
+     */
+    static P2PNode &getInstance();
+    // uniewaznia plik
     ActionResult revoke(std::string);
 
     /// Pokazuje listę globalnych plików w systemie.
@@ -60,5 +78,9 @@ public:
 
     /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();
+
+    virtual ~P2PNode(){
+        delete node;
+    }
 };
 #endif //TINY_P2PNODE_H
