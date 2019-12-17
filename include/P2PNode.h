@@ -25,8 +25,27 @@ private:
     P2PFiles globalFiles;
     P2PRecord localFiles;
 
+    /// Mutex synchronizujący dostęp
+    static std::mutex singletonMutex;
+
+    /// jedyny obiekt
+    static P2PNode *node;
+
+    /// PRYWATNE METODY
+
+
+    /// Prywatny kontruktor.
+    /// Jest wywoływany przez metodę P2PNode#getInstance
+    explicit P2PNode();
+
+    /// Ustawia pole name na UNIXową nazwę użytkownika węzła
+    static void setName();
 public:
-    explicit P2PNode(const std::string&);
+    /**
+     * @if obiekt nie istnieje @then tworzy obiekt.
+     * @return obiekt (singleton)
+     */
+    static P2PNode &getInstance();
     // uniewaznia plik
     ActionResult revoke(std::string);
     // pokazuje pliki w sytemie
@@ -43,5 +62,9 @@ public:
     ActionResult uploadFile(std::string);
     // pokazuje pliki lokalne
     ActionResult showLocalFiles();
+
+    virtual ~P2PNode(){
+        delete node;
+    }
 };
 #endif //TINY_P2PNODE_H
