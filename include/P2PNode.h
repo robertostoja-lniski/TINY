@@ -2,8 +2,10 @@
 #define TINY_P2PNODE_H
 
 #include <string>
+#include <thread>
 #include "P2PRecord.h"
 #include "P2PFiles.h"
+#include <future>
 
 /*
  * mysle ze lepiej dac jednakowy zwracany enum
@@ -23,6 +25,7 @@ enum UDPCommunicateType{
     UDP_BROADCAST = 0,
     UDP_REVOKE = 1,
 };
+
 class P2PNode {
 
 private:
@@ -30,7 +33,16 @@ private:
     P2PFiles globalFiles;
     P2PRecord localFiles;
 
-    int broadcastSocketFd = -1;
+    struct Broadcast{
+        /// Deskryptor gniazda UDP broadcast
+        int socketFd = -1;
+        std::promise<bool> exit;
+        std::thread thread;
+        std::chrono::seconds interval = std::chrono::seconds(5);
+        std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
+
+        static const int UDP_BROADCAST_PORT = 7654;
+    } broadcast;
 
     /// Inicjalizuje gniazdo do rozgłaszania
     ActionResult prepareForBroadcast();
@@ -42,10 +54,8 @@ public:
     ActionResult showGlobalFiles(void);
     // zmienia tablice lokalnych plikow jesli pojawil sie nowy
     ActionResult updateLocalFiles(void);
-    // rozglasza informacje o plikach lokalnych co dana liczbe sekund
-    ActionResult BroadcastFilesFrequently(double);
     // rozglasza pliki po zmianie
-    ActionResult broadcastFiles();
+    ActionResult startBroadcastingFiles();
     // sciaga plik o zadanej nazwie
     ActionResult downloadFile(const std::string&);
     // uploaduje plik
@@ -53,7 +63,7 @@ public:
     // pokazuje pliki lokalne
     ActionResult showLocalFiles();
 
-    /// Destructor
+    /// Destruktor
     virtual ~P2PNode();
 };
 #endif //TINY_P2PNODE_H

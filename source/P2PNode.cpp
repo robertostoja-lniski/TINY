@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <P2PNode.h>
+#include <thread>
+#include <cstring>
 
 
 P2PNode::P2PNode(const std::string& name) : name(name) {
@@ -17,6 +19,8 @@ P2PNode::P2PNode(const std::string& name) : name(name) {
     if(name.length() > 255){
         this->name = name.substr(0, 255);
     }
+
+    startBroadcastingFiles();
 }
 
 ActionResult P2PNode::uploadFile(std::string uploadFileName) {
@@ -57,27 +61,60 @@ ActionResult P2PNode::showGlobalFiles(void) {
     return ACTION_NOT_HANDLED;
 }
 
-ActionResult P2PNode::BroadcastFilesFrequently(double period) {
-    return ACTION_NOT_HANDLED;
-}
-
-ActionResult P2PNode::broadcastFiles() {
+ActionResult P2PNode::startBroadcastingFiles() {
     // Przygotuj się na broadcast
-    prepareForBroadcast();
+    ActionResult actionResult;
+    if((actionResult = prepareForBroadcast()) != ACTION_SUCCESS){
+        // jeśli niepowodzenie, zwróć rezultat
+        return actionResult;
+    }
 
-    //TODO otwórz nowy wątek i wysyłaj komunikaty co zadany czas
-    // Przygotuj i pobierz komunikaty broadcastowe
-    auto communicates = localFiles.getBroadcastCommunicates();
+    // Utwórz wątek
+    std::future wantsToExit = broadcast.exit.get_future();
 
-    return ACTION_NOT_HANDLED;
+    broadcast.thread = std::thread ([this](std::future<bool> wantsToExit){
+        int failuresCount = 0;
+        while(wantsToExit.wait_for(broadcast.interval) != std::future_status::ready){
+
+            auto communicates = localFiles.getBroadcastCommunicates();
+            for(auto c: communicates) {
+                char filesCount[2];
+                std::memcpy(filesCount, &(c.first), 2);
+                std::string str = (char)UDP_BROADCAST + name + '\n' + filesCount + c.second;
+                while(send(broadcast.socketFd, str.c_str(), (int)str.length(), 0) < (int)str.length()) {
+                    if (++failuresCount > 10) {
+                        // restart connection
+                        close(broadcast.socketFd);
+                        while (wantsToExit.wait_for(broadcast.interval) != std::future_status::ready &&
+                               prepareForBroadcast() != ACTION_SUCCESS) {
+                            std::this_thread::sleep_for(std::chrono::seconds(broadcast.restartConnectionInterval));
+                        }
+                        failuresCount = 0;
+                    }
+                }
+            }
+        }
+    }, std::move(wantsToExit) );
+
+    // wątek 'łapany' w destruktorze
+    return ACTION_SUCCESS;
 }
 
 P2PNode::~P2PNode() {
-    close(broadcastSocketFd);
+    //OBSLUGA BROADCASTU
+
+    // Wyślij wiadomość, że już chcę kończyć do broadcasta
+    broadcast.exit.set_value(true);
+
+    //Poczekaj aż broadczast się skończy
+    broadcast.thread.join();
+
+    // Zamknij gniazdo broadcastowe
+    close(broadcast.socketFd);
 }
 
 ActionResult P2PNode::prepareForBroadcast() {
-    int fd = this->broadcastSocketFd;
+    int fd = broadcast.socketFd;
     if(fd >= 0){
         return ACTION_SUCCESS;
     }
@@ -91,7 +128,7 @@ ActionResult P2PNode::prepareForBroadcast() {
     struct sockaddr_in address;
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_ANY);
-    address.sin_port = htons(0);
+    address.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
 
     // Bind adres do gniazda
     if(bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0){
@@ -100,7 +137,7 @@ ActionResult P2PNode::prepareForBroadcast() {
         return ACTION_FAILURE;
     }
 
-    this->broadcastSocketFd = fd;
+    this->broadcast.socketFd = fd;
 
     return ACTION_SUCCESS;
 }
