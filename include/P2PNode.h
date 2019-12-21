@@ -36,8 +36,9 @@ private:
     struct Broadcast{
         /// Deskryptor gniazda UDP broadcast
         int socketFd = -1;
+        std::mutex preparationMutex;
         std::promise<bool> exit;
-        std::thread thread;
+        std::thread sendThread, recvThread;
         std::chrono::seconds interval = std::chrono::seconds(5);
         std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
 
@@ -45,7 +46,9 @@ private:
     } broadcast;
 
     /// Inicjalizuje gniazdo do rozgłaszania
-    ActionResult prepareForBroadcast();
+    /// @param restart czy restartujemy połączenie
+    /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
+    ActionResult prepareForBroadcast(bool restart = false);
 public:
     explicit P2PNode(const std::string&);
     // uniewaznia plik
@@ -56,12 +59,16 @@ public:
     ActionResult updateLocalFiles(void);
     // rozglasza pliki po zmianie
     ActionResult startBroadcastingFiles();
+    /// Rozpoczyna otrzymywanie deskryptorów plików od innych węzłów
+    ActionResult startReceivingBroadcastingFiles();
     // sciaga plik o zadanej nazwie
     ActionResult downloadFile(const std::string&);
     // uploaduje plik
     ActionResult uploadFile(std::string);
     // pokazuje pliki lokalne
     ActionResult showLocalFiles();
+    /// Wysyła komunikat unieważnienia pliku
+    ActionResult sendRevokeCommunicate(const File);
 
     /// Destruktor
     virtual ~P2PNode();
