@@ -1,5 +1,4 @@
-
-#include "../include/UserRequestHandler.h"
+#include "UserRequestHandler.h"
 
 RequestResult UserRequestHandler::processRequest(const std::string& request) {
 

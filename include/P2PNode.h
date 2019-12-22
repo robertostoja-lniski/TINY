@@ -2,6 +2,7 @@
 #define TINY_P2PNODE_H
 
 #include <string>
+#include <mutex>
 #include "P2PRecord.h"
 #include "P2PFiles.h"
 
@@ -79,8 +80,6 @@ public:
     /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();
 
-    virtual ~P2PNode(){
-        delete node;
-    }
 };
+
 #endif //TINY_P2PNODE_H

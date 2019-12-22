@@ -1,4 +1,4 @@
-#include "../include/P2PRecord.h"
+#include "P2PRecord.h"
 
 AddFileResult P2PRecord::addFile(File file) {
 

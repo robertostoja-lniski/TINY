@@ -1,6 +1,7 @@
 #include <iostream>
 #include <utility>
-#include "../include/P2PNode.h"
+
+#include "P2PNode.h"
 
 P2PNode::P2PNode(){}
 
@@ -50,7 +51,7 @@ ActionResult P2PNode::broadcastFiles() {
     return ACTION_NOT_HANDLED;
 }
 
-P2PNode &P2PNode::getInstance() {
+P2PNode& P2PNode::getInstance() {
     singletonMutex.lock();
     // stwórz jeśli nie istnieje
     if(node == nullptr){
