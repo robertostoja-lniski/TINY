@@ -51,19 +51,6 @@ ActionResult P2PNode::broadcastFiles() {
     return ACTION_NOT_HANDLED;
 }
 
-P2PNode& P2PNode::getInstance() {
-    singletonMutex.lock();
-    // stwórz jeśli nie istnieje
-    if(node == nullptr){
-        node = new P2PNode();
-        setName();
-    }
-    singletonMutex.unlock();
-
-    // zwróć instancję węzła
-    return *node;
-}
-
 void P2PNode::setName() {
     // pozyskaj nazwę użytkownika z systemu UNIX
 }

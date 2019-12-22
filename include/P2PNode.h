@@ -35,27 +35,14 @@ private:
     /// Pliki lokalne.
     P2PRecord localFiles;
 
-    /// Mutex synchronizujący dostęp
-    static std::mutex singletonMutex;
+    /// Ustawia pole name na UNIXową nazwę użytkownika węzła
+    static void setName();
 
-    /// jedyny obiekt
-    static P2PNode *node;
-
-    /// PRYWATNE METODY
-
-
+public:
     /// Prywatny kontruktor.
     /// Jest wywoływany przez metodę P2PNode#getInstance
     explicit P2PNode();
 
-    /// Ustawia pole name na UNIXową nazwę użytkownika węzła
-    static void setName();
-public:
-    /**
-     * @if obiekt nie istnieje @then tworzy obiekt.
-     * @return obiekt (singleton)
-     */
-    static P2PNode &getInstance();
     // uniewaznia plik
     ActionResult revoke(std::string);
 
