@@ -10,6 +10,7 @@
 #include <set>
 #include <iostream>
 #include <stdio.h>
+
 #include "File.h"
 
 /// @enum Rezultat operacji na rekordzie

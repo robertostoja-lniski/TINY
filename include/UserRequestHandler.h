@@ -9,6 +9,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+
 #include "LocalSystemHandler.h"
 
 /// @enum typ zapytania

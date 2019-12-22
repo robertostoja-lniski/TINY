@@ -4,11 +4,16 @@
 #include <string>
 #include <iostream>
 #include <boost/filesystem.hpp>
+
+#if __APPLE__
 #include <filesystem>
-#include "P2PNode.h"
+#endif
+
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sstream>
+
+#include "P2PNode.h"
 
 /// @namespace operacje na plikach.
 /// Potrzeba, żeby sprawdzic poprawnosc sciezek do pliku
