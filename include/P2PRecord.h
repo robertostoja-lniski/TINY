@@ -11,6 +11,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <shared_mutex>
+#include <vector>
 #include "File.h"
 
 /// @enum Rezultat operacji na rekordzie

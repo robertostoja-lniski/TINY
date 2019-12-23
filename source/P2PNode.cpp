@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sstream>
+#include <cstring>
+#include <unistd.h>
 
 P2PNode::P2PNode() {
     setName();
