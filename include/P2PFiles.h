@@ -17,11 +17,14 @@ enum AddGlobalFileResult{
 class P2PFiles {
 
 private:
+    /// Mapa rekordów setów plików z kluczem nazw
     std::map< std::string, P2PRecord > files;
 
     /// mutex synchronizujący mapę files
     std::shared_mutex mutex;
-    // wykorzystywane do wypisywania
+
+    /// Wykorzystywane do wypisywania
+    /// @synchronized
     std::map< std::string, P2PRecord > getFiles() const;
 
     /// Set przechowujący informacje o unieważnionych przez lokalny węzeł plikach.
@@ -40,9 +43,13 @@ public:
     AddGlobalFileResult add(std::string node, File file);
     /// Usuwa plik ze wszytskich list
     void revoke(File file);
-    // dostep powinien byc synchronizowany
-    void updateFiles(std::string &&name, P2PRecord &&newFiles);
-    // odczyt powinien byc synchronizowany
+
+    /// Aktualizuj konkretny rekord
+    /// @synchronized
+    void updateFiles(std::string name, P2PRecord newFiles);
+
+    /// Pokaż wszystkie pliki
+    /// @synchronized
     void showFiles();
 };
 

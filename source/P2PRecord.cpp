@@ -1,9 +1,6 @@
-
 #include <P2PRecord.h>
 #include <P2PNode.h>
 #include <vector>
-
-#include "../include/P2PRecord.h"
 
 AddFileResult P2PRecord::addFile(File file) {
 

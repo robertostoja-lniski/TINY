@@ -1,10 +1,11 @@
 #include <iostream>
 #include <vector>
-#include "../include/P2PNode.h"
+#include "P2PNode.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sstream>
+#include <utility>
 
 
 P2PNode::P2PNode(const std::string& name) : name(name) {
@@ -209,5 +210,22 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
 
     // wątek 'łapany' w destruktorze
     return ACTION_SUCCESS;
+}
+
+P2PNode& P2PNode::getInstance() {
+    singletonMutex.lock();
+    // stwórz jeśli nie istnieje
+    if(node == nullptr){
+        node = new P2PNode();
+        setName();
+    }
+    singletonMutex.unlock();
+
+    // zwróć instancję węzła
+    return *node;
+}
+
+void P2PNode::setName() {
+    // pozyskaj nazwę użytkownika z systemu UNIX
 }
 

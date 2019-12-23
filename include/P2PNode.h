@@ -3,15 +3,15 @@
 
 #include <string>
 #include <thread>
+#include <mutex>
 #include "P2PRecord.h"
 #include "P2PFiles.h"
 #include <future>
 
-/*
- * mysle ze lepiej dac jednakowy zwracany enum
- * dla kilku metod zamiast zwracac inta,
- * przy sprawdzaniu poprawnosci wykonania zadania
- * bedzie wieksza czytelnosc jesli uzyjemy enum
+/**
+ * @enum
+ * Rezultat akcji wykonywanej przez P2PNode
+ * @see P2PNode
  */
 enum ActionResult {
     ACTION_NOT_HANDLED = -1,
@@ -26,11 +26,21 @@ enum UDPCommunicateType{
     UDP_REVOKE = 1,
 };
 
+/**
+ * @class
+ * Reprezentuje węzeł sieci P2P.
+ * @implements wzorzec projektowy singleton
+ */
 class P2PNode {
 
 private:
+    /// Nazwa węzła. Jest to nazwa użytkownika systemu UNIX.
     std::string name;
+
+    /// Pliki globalne całego systemu, których nazwy są pobierane przez UDP.
     P2PFiles globalFiles;
+
+    /// Pliki lokalne.
     P2PRecord localFiles;
 
     struct Broadcast{
@@ -49,8 +59,28 @@ private:
     /// @param restart czy restartujemy połączenie
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
     ActionResult prepareForBroadcast(bool restart = false);
+
+    /// Mutex synchronizujący dostęp
+    static std::mutex singletonMutex;
+
+    /// jedyny obiekt
+    static P2PNode *node;
+
+    /// PRYWATNE METODY
+
+
+    /// Prywatny kontruktor.
+    /// Jest wywoływany przez metodę P2PNode#getInstance
+    explicit P2PNode();
+
+    /// Ustawia pole name na UNIXową nazwę użytkownika węzła
+    static void setName();
 public:
-    explicit P2PNode(const std::string&);
+    /**
+     * @if obiekt nie istnieje @then tworzy obiekt.
+     * @return obiekt (singleton)
+     */
+    static P2PNode &getInstance();
     // uniewaznia plik
     ActionResult revoke(std::string);
     // pokazuje pliki w sytemie
@@ -61,11 +91,13 @@ public:
     ActionResult startBroadcastingFiles();
     /// Rozpoczyna otrzymywanie deskryptorów plików od innych węzłów
     ActionResult startReceivingBroadcastingFiles();
-    // sciaga plik o zadanej nazwie
+    /// Pobiera plik o zadanej nazwie
     ActionResult downloadFile(const std::string&);
-    // uploaduje plik
+
+    /// Wrzuca plik do lokalnego systemu
     ActionResult uploadFile(std::string);
-    // pokazuje pliki lokalne
+
+    /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();
     /// Wysyła komunikat unieważnienia pliku
     ActionResult sendRevokeCommunicate(const File);
@@ -73,4 +105,5 @@ public:
     /// Destruktor
     virtual ~P2PNode();
 };
+
 #endif //TINY_P2PNODE_H
