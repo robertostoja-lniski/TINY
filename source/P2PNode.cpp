@@ -5,10 +5,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sstream>
-#include <utility>
 
-
-P2PNode::P2PNode(const std::string& name) : name(name) {
+P2PNode::P2PNode() {
+    setName();
     // Nazwa nie może być dłuższa niż 255 bajtów,
     // ponieważ jednostka plikowa wynosi 258 bajtów (nazwa(128)+\t+owner(128)+\n),
     // więc jednostka header też powinna wynosić max 258 bajtów (typ(1)+nazwa(255)+ilość plików(2))
@@ -74,21 +73,37 @@ ActionResult P2PNode::startBroadcastingFiles() {
 
     broadcast.sendThread = std::thread ([this](){
         int failuresCount = 0;
-        std::future wantsToExit = broadcast.exit.get_future();
-        while(wantsToExit.wait_for(broadcast.interval) != std::future_status::ready){
+        while(true){
+            // Sprawdzenie warunku czy wychodzimy z petli
+            broadcast.exitMutex.lock();
+            if(broadcast.exit){
+                broadcast.exitMutex.unlock();
+                break;
+            }
+            broadcast.exitMutex.unlock();
 
             auto communicates = localFiles.getBroadcastCommunicates();
             for(auto c: communicates) {
                 char filesCount[2];
                 std::memcpy(filesCount, &(c.first), 2);
                 std::string str = (char)UDP_BROADCAST + name + '\n' + filesCount + c.second;
-                while(send(broadcast.socketFd, str.c_str(), (int)str.length(), 0) < (int)str.length()) {
-                    if (++failuresCount > 10) {
-                        while (wantsToExit.wait_for(broadcast.interval) != std::future_status::ready &&
-                               prepareForBroadcast(true) != ACTION_SUCCESS) {
-                            std::this_thread::sleep_for(std::chrono::seconds(broadcast.restartConnectionInterval));
+                // jeżeli jest niezerowa liczba plików, to wysyłaj
+                if(c.first > 0) {
+                    while (send(broadcast.socketFd, str.c_str(), (int) str.length(), 0) < (int) str.length()) {
+                        if (++failuresCount > 10) {
+                            while (prepareForBroadcast(true) != ACTION_SUCCESS) {
+                                // Sprawdzenie warunku czy wychodzimy z petli
+                                broadcast.exitMutex.lock();
+                                if (broadcast.exit) {
+                                    broadcast.exitMutex.unlock();
+                                    break;
+                                }
+                                broadcast.exitMutex.unlock();
+
+                                std::this_thread::sleep_for(std::chrono::seconds(broadcast.restartConnectionInterval));
+                            }
+                            failuresCount = 0;
                         }
-                        failuresCount = 0;
                     }
                 }
             }
@@ -102,10 +117,12 @@ ActionResult P2PNode::startBroadcastingFiles() {
 P2PNode::~P2PNode() {
     //OBSLUGA BROADCASTU
 
-    // Wyślij wiadomość, że już chcę kończyć do broadcasta
-    broadcast.exit.set_value(true);
+    // Oznacz że chcę wyjśc z wątkow
+    broadcast.exitMutex.lock();
+    broadcast.exit = true;
+    broadcast.exitMutex.unlock();
 
-    //Poczekaj aż broadczast się skończy
+    // Poczekaj aż broadczast się skończy
     broadcast.sendThread.join();
     broadcast.recvThread.join();
 
@@ -173,10 +190,17 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
         return actionResult;
     }
 
-    broadcast.sendThread = std::thread ([this](){
-        std::future wantsToExit = broadcast.exit.get_future();
+    broadcast.recvThread = std::thread ([this](){
         char buf[16*1024];
-        while(wantsToExit.wait_for(std::chrono::seconds(0)) != std::future_status::ready){
+        while(true){
+            // Sprawdzenie warunku czy wychodzimy z petli
+            broadcast.exitMutex.lock();
+            if(broadcast.exit){
+                broadcast.exitMutex.unlock();
+                break;
+            }
+            broadcast.exitMutex.unlock();
+
             if(recv(broadcast.socketFd, buf, sizeof(buf), 0) < 0){
                 continue;
             }
@@ -212,20 +236,9 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
     return ACTION_SUCCESS;
 }
 
-P2PNode& P2PNode::getInstance() {
-    singletonMutex.lock();
-    // stwórz jeśli nie istnieje
-    if(node == nullptr){
-        node = new P2PNode();
-        setName();
-    }
-    singletonMutex.unlock();
-
-    // zwróć instancję węzła
-    return *node;
-}
 
 void P2PNode::setName() {
-    // pozyskaj nazwę użytkownika z systemu UNIX
+    // TODO pozyskaj nazwę użytkownika z systemu UNIX
 }
+
 

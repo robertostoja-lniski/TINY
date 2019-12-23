@@ -46,8 +46,9 @@ private:
     struct Broadcast{
         /// Deskryptor gniazda UDP broadcast
         int socketFd = -1;
-        std::mutex preparationMutex;
-        std::promise<bool> exit;
+        std::mutex preparationMutex, exitMutex;
+        /// @synchronized
+        bool exit = false;
         std::thread sendThread, recvThread;
         std::chrono::seconds interval = std::chrono::seconds(5);
         std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
@@ -60,27 +61,12 @@ private:
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
     ActionResult prepareForBroadcast(bool restart = false);
 
-    /// Mutex synchronizujący dostęp
-    static std::mutex singletonMutex;
-
-    /// jedyny obiekt
-    static P2PNode *node;
-
     /// PRYWATNE METODY
-
-
-    /// Prywatny kontruktor.
-    /// Jest wywoływany przez metodę P2PNode#getInstance
-    explicit P2PNode();
 
     /// Ustawia pole name na UNIXową nazwę użytkownika węzła
     static void setName();
 public:
-    /**
-     * @if obiekt nie istnieje @then tworzy obiekt.
-     * @return obiekt (singleton)
-     */
-    static P2PNode &getInstance();
+    explicit P2PNode();
     // uniewaznia plik
     ActionResult revoke(std::string);
     // pokazuje pliki w sytemie

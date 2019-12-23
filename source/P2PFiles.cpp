@@ -2,8 +2,6 @@
 // Created by Wojtek on 17/12/2019.
 //
 
-#include <P2PFiles.h>
-
 #include "P2PFiles.h"
 
 P2PRecord &P2PFiles::operator[](std::string nodeName) {
@@ -20,10 +18,8 @@ AddGlobalFileResult P2PFiles::add(std::string node, File file) {
         files[node].addFile(std::move(file));
         return ADD_GLOBAL_SUCCESS;
     }
-    else{
-        // jeśli plik jest na liście unieważnionych, to ponów komunikat o unieważnieniu
-        return ADD_GLOBAL_REVOKED;
-    }
+    // jeśli plik jest na liście unieważnionych, to ponów komunikat o unieważnieniu
+    return ADD_GLOBAL_REVOKED;
 }
 
 void P2PFiles::revoke(File file) {
@@ -37,6 +33,8 @@ void P2PFiles::revoke(File file) {
 }
 
 void P2PFiles::addToFilesRevokedByMe(File file) {
+    std::unique_lock<std::shared_mutex> lk(mutex);
+
     filesRevokedByMe.insert(file);
 }
 

@@ -135,6 +135,6 @@ void UserRequestHandler::printErrorMessage() {
     std::cout << "Nieznana komenda - wybierz jedna z ponizszych\n";
 }
 
-UserRequestHandler::UserRequestHandler(const LocalSystemHandler &systemHandler) : localSystemHandler(systemHandler) {
+UserRequestHandler::UserRequestHandler(LocalSystemHandler &systemHandler) : localSystemHandler(systemHandler) {
 
 }
