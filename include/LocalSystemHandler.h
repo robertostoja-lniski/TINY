@@ -94,14 +94,14 @@ private:
     /// Pobiera plik, jesli jest w workspace
     FileOperationResult upload(std::string);
 
-    /// Wypisuje na standardowe wyjście nazwę użytkownika
-    GetUser getUserName(std::string&);
 public:
     /// Konstruktor
-    LocalSystemHandler(P2PNode);
+    LocalSystemHandler(P2PNode&);
     // tylko do oczytu
     // wyswietla zasoby lokalne
     FileOperationResult showLocalFiles();
+
+    static GetUser getUserName(std::string&);
 
     /**
      * Wyświetla zasoby globalne

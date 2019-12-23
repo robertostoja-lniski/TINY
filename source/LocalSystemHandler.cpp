@@ -1,6 +1,7 @@
 #include "LocalSystemHandler.h"
+#include "P2PNode.h"
 
-LocalSystemHandler::LocalSystemHandler(P2PNode p2PNode) : p2PNode(p2PNode) {
+LocalSystemHandler::LocalSystemHandler(P2PNode& p2PNode) : p2PNode(p2PNode) {
     setDefaultWorkspace();
     restorePreviousState();
 }
