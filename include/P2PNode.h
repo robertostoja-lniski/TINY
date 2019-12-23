@@ -2,9 +2,11 @@
 #define TINY_P2PNODE_H
 
 #include <string>
+#include <thread>
 #include <mutex>
 #include "P2PRecord.h"
 #include "P2PFiles.h"
+#include <future>
 
 /**
  * @enum
@@ -16,6 +18,12 @@ enum ActionResult {
     ACTION_SUCCESS = 0,
     ACTION_NO_EFFECT = 1,
     ACTION_FAILURE = 2,
+};
+
+/// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
+enum UDPCommunicateType{
+    UDP_BROADCAST = 0,
+    UDP_REVOKE = 1,
 };
 
 /**
@@ -35,42 +43,40 @@ private:
     /// Pliki lokalne.
     P2PRecord localFiles;
 
-    /// Mutex synchronizujący dostęp
-    static std::mutex singletonMutex;
+    struct Broadcast{
+        /// Deskryptor gniazda UDP broadcast
+        int socketFd = -1;
+        std::mutex preparationMutex, exitMutex;
+        /// @synchronized
+        bool exit = false;
+        std::thread sendThread, recvThread;
+        std::chrono::seconds interval = std::chrono::seconds(5);
+        std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
 
-    /// jedyny obiekt
-    static P2PNode *node;
+        static const int UDP_BROADCAST_PORT = 7654;
+    } broadcast;
+
+    /// Inicjalizuje gniazdo do rozgłaszania
+    /// @param restart czy restartujemy połączenie
+    /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
+    ActionResult prepareForBroadcast(bool restart = false);
 
     /// PRYWATNE METODY
-
-
-    /// Prywatny kontruktor.
-    /// Jest wywoływany przez metodę P2PNode#getInstance
-    explicit P2PNode();
 
     /// Ustawia pole name na UNIXową nazwę użytkownika węzła
     static void setName();
 public:
-    /**
-     * @if obiekt nie istnieje @then tworzy obiekt.
-     * @return obiekt (singleton)
-     */
-    static P2PNode &getInstance();
+    explicit P2PNode();
     // uniewaznia plik
     ActionResult revoke(std::string);
-
-    /// Pokazuje listę globalnych plików w systemie.
-    ActionResult showGlobalFiles();
-
-    /// Zmienia tablicę lokalnych plików. Pobiera informacje z ukrytego katalogu i pliku konfiguracyjnego.
-    ActionResult updateLocalFiles();
-
-    /// Rozgłasza informacje o plikach lokalnych co daną liczbę sekund w osobnym wątku.
-    ActionResult BroadcastFilesFrequently(double);
-
-    /// Rozgłasza pliki do wszystkich węzłów
-    ActionResult broadcastFiles();
-
+    // pokazuje pliki w sytemie
+    ActionResult showGlobalFiles(void);
+    // zmienia tablice lokalnych plikow jesli pojawil sie nowy
+    ActionResult updateLocalFiles(void);
+    // rozglasza pliki po zmianie
+    ActionResult startBroadcastingFiles();
+    /// Rozpoczyna otrzymywanie deskryptorów plików od innych węzłów
+    ActionResult startReceivingBroadcastingFiles();
     /// Pobiera plik o zadanej nazwie
     ActionResult downloadFile(const std::string&);
 
@@ -79,7 +85,11 @@ public:
 
     /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();
+    /// Wysyła komunikat unieważnienia pliku
+    ActionResult sendRevokeCommunicate(const File);
 
+    /// Destruktor
+    virtual ~P2PNode();
 };
 
 #endif //TINY_P2PNODE_H

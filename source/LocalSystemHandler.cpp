@@ -1,6 +1,6 @@
 #include "LocalSystemHandler.h"
 
-LocalSystemHandler::LocalSystemHandler(P2PNode p2PNode) : p2PNode(p2PNode) {
+LocalSystemHandler::LocalSystemHandler(P2PNode &node) : p2PNode(node){
     setDefaultWorkspace();
     restorePreviousState();
 }
@@ -155,7 +155,6 @@ FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
 
     updateConfig(fileToAdd, CONFIG_ADD);
     std::cout << "Plik " << fileToAdd << " zostal dodany do systemu\n";
-    p2PNode.broadcastFiles();
     return FILE_SUCCESS;
 }
 

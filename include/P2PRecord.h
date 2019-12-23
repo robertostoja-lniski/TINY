@@ -10,7 +10,8 @@
 #include <set>
 #include <iostream>
 #include <stdio.h>
-
+#include <shared_mutex>
+#include <vector>
 #include "File.h"
 
 /// @enum Rezultat operacji na rekordzie
@@ -36,6 +37,9 @@ private:
     /// Set plików
     std::set< File > fileSet;
 
+    /// Mutex używany do synchronizacji zapis-odczyt setu plików
+    std::shared_mutex mutex;
+
 public:
 
     /// Dodaje plik do setu plików
@@ -49,6 +53,15 @@ public:
     // TODO przeciazony operator
     /// Wypisuje pliki
     void print();
+
+    /**
+     * @author Wojciech
+     * Zwraca wektor komunikatów broadcastowych.
+     * Są one później po kolei wysyłane
+     * @return wektor par {ilość plików, treść (pliki)}
+     * @synchronized
+     */
+    std::vector<std::pair<u_short, std::string>> getBroadcastCommunicates();
 };
 
 
