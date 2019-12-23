@@ -40,7 +40,7 @@ public:
      * @param file referencja do pliku porównywanego
      * @return czy nazwa plik jest alfabetycznie większa od drugiej nazwy
      */
-    bool operator<(File const &file) const{
+    bool operator<(File const &file) const {
         return name < file.getName();
     }
 };

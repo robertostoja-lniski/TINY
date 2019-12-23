@@ -13,20 +13,20 @@
 #include "LocalSystemHandler.h"
 
 /// @enum typ zapytania
-enum RequestType{
+enum RequestType {
     NOT_A_REQUEST = -1,
     SINGLE_REQUEST = 0,
     DOUBLE_REQUEST = 1,
 };
 
 /// @enum rezultat zapytania
-enum RequestResult{
+enum RequestResult {
     REQUEST_SUCCESS = 0,
     REQUEST_FAILURE = 1,
 };
 
 /// @enum typ wypisywania
-enum LsType{
+enum LsType {
     WO_OWNER = 0, /// nie wyświetla właścicieli plików
     W_OWNER = 1,  ///     wyświetla właścicieli plików
 };
@@ -35,7 +35,7 @@ enum LsType{
  * Obsługuje zapytania użytkownika.
  * @author Robert
  */
-class UserRequestHandler{
+class UserRequestHandler {
 
 private:
 
@@ -47,6 +47,7 @@ private:
 
     /// Lokalny kontroler systemu
     LocalSystemHandler &localSystemHandler;
+
     /**
      *  Sprawdza czy pierwszy parametr jest poleceniem
      *  jesli tak, to zwaraca rodzaj polecania ( jedno, lub dwuargumentowe )
@@ -57,12 +58,16 @@ private:
      *  po otrzymaniu        unixy   tiny
      *  zwroci NOT_A_REQUEST i nie zmieni argumentu drugiego i trzeciego
      */
-    RequestType preprocessRequest(std::string, std::string&, std::string&);
+    RequestType preprocessRequest(std::string, std::string &, std::string &);
+
     // dla pojedynczych polecen
-    RequestResult processRequest(const std::string&);
+    RequestResult processRequest(const std::string &);
+
     // dla podwojnych polecen
-    RequestResult processRequest(const std::string&, const std::string&);
+    RequestResult processRequest(const std::string &, const std::string &);
+
     static void printHelp();
+
     static void printErrorMessage();
 
 public:
@@ -72,4 +77,5 @@ public:
     /// Odbiera komendy i je przetwarza
     void waitForRequest();
 };
+
 #endif //TINY_USERREQUESTHANDLER_H

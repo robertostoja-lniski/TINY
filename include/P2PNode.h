@@ -8,7 +8,7 @@
 #include "P2PFiles.h"
 #include <future>
 
-#define MAX_USERNAME_LEN 20
+#define MAX_USERNAME_LEN 40
 #define MAX_FILENAME_LEN 50
 #define MAX_TCP_CONNECTIONS 5
 
@@ -33,7 +33,7 @@ struct fileRequest {
 };
 
 /// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
-enum UDPCommunicateType{
+enum UDPCommunicateType {
     UDP_BROADCAST = 0,
     UDP_REVOKE = 1,
 
@@ -70,7 +70,7 @@ private:
     };
 
     /// uniewaznia plik
-    struct Broadcast{
+    struct Broadcast {
         /// Deskryptor gniazda UDP broadcast
         int socketFd = -1;
         std::mutex preparationMutex, exitMutex;
@@ -87,28 +87,37 @@ private:
     /// @param restart czy restartujemy połączenie
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
     ActionResult prepareForBroadcast(bool restart = false);
+
 public:
 
     std::string getUserName();
+
     explicit P2PNode(int);
+
     // uniewaznia plik
     ActionResult revoke(std::string);
+
     // pokazuje pliki w sytemie
     ActionResult showGlobalFiles(void);
+
     // zmienia tablice lokalnych plikow jesli pojawil sie nowy
     ActionResult updateLocalFiles(void);
+
     // rozglasza pliki po zmianie
     ActionResult startBroadcastingFiles();
+
     /// Rozpoczyna otrzymywanie deskryptorów plików od innych węzłów
     ActionResult startReceivingBroadcastingFiles();
+
     /// Pobiera plik o zadanej nazwie
-    ActionResult downloadFile(const std::string&);
+    ActionResult downloadFile(const std::string &);
 
     /// Wrzuca plik do lokalnego systemu
     ActionResult uploadFile(std::string);
 
     /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();
+
     /// Wysyła komunikat unieważnienia pliku
     ActionResult sendRevokeCommunicate(const File);
 
