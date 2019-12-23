@@ -16,7 +16,6 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-pthread")
 
-
 file(GLOB SOURCES "source/*.cpp")
 set(SOURCES ${SOURCES})
 

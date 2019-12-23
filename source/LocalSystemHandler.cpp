@@ -156,7 +156,6 @@ FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
 
     updateConfig(fileToAdd, CONFIG_ADD);
     std::cout << "Plik " << fileToAdd << " zostal dodany do systemu\n";
-    p2PNode.broadcastFiles();
     return FILE_SUCCESS;
 }
 

@@ -46,7 +46,7 @@ private:
     const std::vector<std::string> doubleCommandsPrefix = {"get", "add", "put", "rm"};
 
     /// Lokalny kontroler systemu
-    LocalSystemHandler localSystemHandler;
+    LocalSystemHandler &localSystemHandler;
     /**
      *  Sprawdza czy pierwszy parametr jest poleceniem
      *  jesli tak, to zwaraca rodzaj polecania ( jedno, lub dwuargumentowe )
@@ -67,7 +67,7 @@ private:
 
 public:
     /// Konstruktor
-    explicit UserRequestHandler(const LocalSystemHandler &systemHandler);
+    explicit UserRequestHandler(LocalSystemHandler &systemHandler);
 
     /// Odbiera komendy i je przetwarza
     void waitForRequest();

@@ -80,7 +80,7 @@ private:
     std::string workspaceUpperDirPath;
 
     /// Węzeł lokalny
-    P2PNode p2PNode;
+    P2PNode &p2PNode;
 
     /// Ustawia katalog roboczy użytkownika jako katalog główny systemu. (jeśli nie istnieje to tworzy go)
     DirOperationResult setDefaultWorkspace();
@@ -96,7 +96,9 @@ private:
 
 public:
     /// Konstruktor
+
     LocalSystemHandler(P2PNode&);
+
     // tylko do oczytu
     // wyswietla zasoby lokalne
     FileOperationResult showLocalFiles();
