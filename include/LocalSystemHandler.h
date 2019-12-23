@@ -54,11 +54,7 @@ enum ConfigOperation{
     CONFIG_REMOVE = 1,
 };
 
-/// @enum Rezultat operacji pobrania użytkownika
-enum GetUser {
-    GET_USER_SUCCESS = 0,
-    GET_USER_FAIL = 1,
-};
+
 
 /**
  * @class
@@ -102,8 +98,6 @@ public:
     // tylko do oczytu
     // wyswietla zasoby lokalne
     FileOperationResult showLocalFiles();
-
-    static GetUser getUserName(std::string&);
 
     /**
      * Wyświetla zasoby globalne

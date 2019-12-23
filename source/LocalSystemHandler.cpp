@@ -15,11 +15,7 @@ FileOperationResult LocalSystemHandler::put(std::string filepath) {
     // inne nie powinny byc akceptowane
     if(filepath[0] == '~') {
 
-        std::string user;
-        if(getUserName(user) != GET_USER_SUCCESS){
-            return FILE_HOMEPATH_BROKEN;
-        }
-        filepath = "/home/" + user + filepath.substr(1, filepath.size());
+        filepath = "/home/" + p2PNode.getUserName() + filepath.substr(1, filepath.size());
     }
 
     if(!filesys::exists(filepath)) {
@@ -169,12 +165,8 @@ FileOperationResult LocalSystemHandler::showGlobalFiles(bool printOwner) {
 
 DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
 
-    std::string user;
-    if(getUserName(user) != GET_USER_SUCCESS) {
-        return DIR_CANNOT_FIND_WORKSPACE_USER;
-    }
 
-    std::string defaultWorkspacePath = "/home/" + user + "/";
+    std::string defaultWorkspacePath = "/home/" + p2PNode.getUserName() + "/";
 
     // if workspace exists it is treated as success
     if(filesys::exists(defaultWorkspacePath)) {
@@ -300,20 +292,4 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
     }
     return FILE_SUCCESS;
 }
-
-GetUser LocalSystemHandler::getUserName(std::string &user) {
-
-    size_t maxUserNameLen = 32;
-    char linuxName[maxUserNameLen];
-
-    if(getlogin_r(linuxName, maxUserNameLen)){
-        std::cout << "Nie udalo sie ustawic domyslnego folderu roboczego\n";
-        return GET_USER_FAIL;
-    }
-
-    std::string tmp(linuxName);
-    user = tmp;
-    return GET_USER_SUCCESS;
-}
-
 

@@ -48,7 +48,7 @@ class P2PNode {
 
 private:
     /// Nazwa węzła. Jest to nazwa użytkownika systemu UNIX.
-    std::string name;
+    std::string userName;
 
     /// Pliki globalne całego systemu, których nazwy są pobierane przez UDP.
     P2PFiles globalFiles;
@@ -62,6 +62,12 @@ private:
     void sendFile(int, int, unsigned long long, unsigned long long);
 
     void handleDownloadRequests();
+
+    /// @enum Rezultat operacji pobrania użytkownika
+    enum GetUser {
+        GET_USER_SUCCESS = 0,
+        GET_USER_FAIL = 1,
+    };
 
     /// uniewaznia plik
     struct Broadcast{
@@ -81,12 +87,9 @@ private:
     /// @param restart czy restartujemy połączenie
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
     ActionResult prepareForBroadcast(bool restart = false);
-
-    /// PRYWATNE METODY
-
-    /// Ustawia pole name na UNIXową nazwę użytkownika węzła
-    static void setName();
 public:
+
+    std::string getUserName();
     explicit P2PNode(int);
     // uniewaznia plik
     ActionResult revoke(std::string);

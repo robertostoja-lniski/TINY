@@ -17,15 +17,16 @@
 #include <sstream>
 #include <cstring>
 #include <unistd.h>
+#include <stdexcept>
 
 P2PNode::P2PNode(int tcpPort):tcpPort(tcpPort){
-    setName();
-    // Nazwa nie może być dłuższa niż 255 bajtów,
-    // ponieważ jednostka plikowa wynosi 258 bajtów (nazwa(128)+\t+owner(128)+\n),
-    // więc jednostka header też powinna wynosić max 258 bajtów (typ(1)+nazwa(255)+ilość plików(2))
-    if(name.length() > 255){
-        this->name = name.substr(0, 255);
+    size_t maxUserNameLen = 32;
+    char linuxName[maxUserNameLen];
+
+    if(getlogin_r(linuxName, maxUserNameLen)){
+        throw std::runtime_error("nie mozna pobrac nazwy uzytkownika unix");
     }
+    userName = std::string(linuxName);
 
     startBroadcastingFiles();
     startReceivingBroadcastingFiles();
@@ -33,7 +34,7 @@ P2PNode::P2PNode(int tcpPort):tcpPort(tcpPort){
 
 ActionResult P2PNode::uploadFile(std::string uploadFileName) {
 
-    File file(std::move(uploadFileName), name);
+    File file(std::move(uploadFileName), userName);
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
     AddFileResult ret = localFiles.addFile(file);
@@ -51,7 +52,7 @@ ActionResult P2PNode::showLocalFiles() {
 }
 
 ActionResult P2PNode::revoke(std::string revokeFileName) {
-    File tmp(std::move(revokeFileName), name);
+    File tmp(std::move(revokeFileName), userName);
 
     if(localFiles.removeFile(tmp) != SUCCESS){
         return ACTION_FAILURE;
@@ -98,7 +99,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
             for(auto c: communicates) {
                 char filesCount[2];
                 std::memcpy(filesCount, &(c.first), 2);
-                std::string str = (char)UDP_BROADCAST + name + '\n' + filesCount + c.second;
+                std::string str = (char)UDP_BROADCAST + userName + '\n' + filesCount + c.second;
                 // jeżeli jest niezerowa liczba plików, to wysyłaj
                 if(c.first > 0) {
                     while (send(broadcast.socketFd, str.c_str(), (int) str.length(), 0) < (int) str.length()) {
@@ -142,9 +143,6 @@ P2PNode::~P2PNode() {
     close(broadcast.socketFd);
 }
 
-void P2PNode::setName() {
-    // pozyskaj nazwę użytkownika z systemu UNIX
-}
 
 void P2PNode::sendFile(int fileFD, int clientFD, unsigned long long offset, unsigned long long bytesCount){
     std::cout << "send file, jeszcze nie zaimplementowane\n";
@@ -202,11 +200,9 @@ void P2PNode::handleDownloadRequests() {
         #pragma clang diagnostic pop
         std::cout<<" "<<request->fileName<<" "<<request->bytesCount<<" "<<request->offset<<std::endl;
 
-        std::string user;
-        LocalSystemHandler::getUserName(user);
         char path[200];
         strcpy(path, "/home/");
-        strcat(path, user.c_str());
+        strcat(path, userName.c_str());
         strcat(path, "/.P2Pworkspace/");
         strcat(path, request->fileName);
 
@@ -348,6 +344,10 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
 
     // wątek 'łapany' w destruktorze
     return ACTION_SUCCESS;
+}
+
+std::string P2PNode::getUserName() {
+    return userName;
 }
 
 
