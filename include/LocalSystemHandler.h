@@ -49,22 +49,17 @@ enum DirOperationResult {
 };
 
 /// @enum Operacja konfiguracyjna
-enum ConfigOperation{
+enum ConfigOperation {
     CONFIG_ADD = 0,
     CONFIG_REMOVE = 1,
 };
 
-/// @enum Rezultat operacji pobrania użytkownika
-enum GetUser {
-    GET_USER_SUCCESS = 0,
-    GET_USER_FAIL = 1,
-};
 
 /**
  * @class
  * Zajmuje się operacjami na lokalnym systemie plików należących do systemu P2P.
  */
-class LocalSystemHandler{
+class LocalSystemHandler {
 
 private:
     /// Nazwa katalogu roboczego systemu
@@ -89,16 +84,16 @@ private:
     FileOperationResult restorePreviousState();
 
     /// Nadpisuje konfigurację po wprowadzeniu zmian
-    FileOperationResult updateConfig(const std::string&, ConfigOperation);
+    FileOperationResult updateConfig(const std::string &, ConfigOperation);
 
     /// Pobiera plik, jesli jest w workspace
     FileOperationResult upload(std::string);
 
-    /// Wypisuje na standardowe wyjście nazwę użytkownika
-    GetUser getUserName(std::string&);
 public:
     /// Konstruktor
+
     LocalSystemHandler(P2PNode &);
+
     // tylko do oczytu
     // wyswietla zasoby lokalne
     FileOperationResult showLocalFiles();
@@ -127,4 +122,5 @@ public:
     FileOperationResult removeFile(std::string);
 
 };
+
 #endif //TINY_LOCALSYSTEMHANDLER_H

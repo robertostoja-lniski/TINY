@@ -8,6 +8,10 @@
 #include "P2PFiles.h"
 #include <future>
 
+#define MAX_USERNAME_LEN 40
+#define MAX_FILENAME_LEN 50
+#define MAX_TCP_CONNECTIONS 5
+
 /**
  * @enum
  * Rezultat akcji wykonywanej przez P2PNode
@@ -20,10 +24,19 @@ enum ActionResult {
     ACTION_FAILURE = 2,
 };
 
+
+struct fileRequest {
+    // dodac limity na
+    char fileName[MAX_FILENAME_LEN];
+    unsigned long long offset;
+    unsigned long long bytesCount;
+};
+
 /// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
-enum UDPCommunicateType{
+enum UDPCommunicateType {
     UDP_BROADCAST = 0,
     UDP_REVOKE = 1,
+
 };
 
 /**
@@ -35,7 +48,7 @@ class P2PNode {
 
 private:
     /// Nazwa węzła. Jest to nazwa użytkownika systemu UNIX.
-    std::string name;
+    std::string userName;
 
     /// Pliki globalne całego systemu, których nazwy są pobierane przez UDP.
     P2PFiles globalFiles;
@@ -43,7 +56,21 @@ private:
     /// Pliki lokalne.
     P2PRecord localFiles;
 
-    struct Broadcast{
+    /// Port, na ktorym sluchamy na zadania transferu plikow
+    int tcpPort;
+
+    void sendFile(int, int, unsigned long long, unsigned long long);
+
+    void handleDownloadRequests();
+
+    /// @enum Rezultat operacji pobrania użytkownika
+    enum GetUser {
+        GET_USER_SUCCESS = 0,
+        GET_USER_FAIL = 1,
+    };
+
+    /// uniewaznia plik
+    struct Broadcast {
         /// Deskryptor gniazda UDP broadcast
         int socketFd = -1;
         std::mutex preparationMutex, exitMutex;
@@ -61,32 +88,42 @@ private:
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
     ActionResult prepareForBroadcast(bool restart = false);
 
-    /// PRYWATNE METODY
-
-    /// Ustawia pole name na UNIXową nazwę użytkownika węzła
-    static void setName();
 public:
-    explicit P2PNode();
+
+    std::string getUserName();
+
+    explicit P2PNode(int);
+
     // uniewaznia plik
     ActionResult revoke(std::string);
+
     // pokazuje pliki w sytemie
     ActionResult showGlobalFiles(void);
+
     // zmienia tablice lokalnych plikow jesli pojawil sie nowy
     ActionResult updateLocalFiles(void);
+
     // rozglasza pliki po zmianie
     ActionResult startBroadcastingFiles();
+
     /// Rozpoczyna otrzymywanie deskryptorów plików od innych węzłów
     ActionResult startReceivingBroadcastingFiles();
+
     /// Pobiera plik o zadanej nazwie
-    ActionResult downloadFile(const std::string&);
+    ActionResult downloadFile(const std::string &);
 
     /// Wrzuca plik do lokalnego systemu
     ActionResult uploadFile(std::string);
 
     /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();
+
     /// Wysyła komunikat unieważnienia pliku
     ActionResult sendRevokeCommunicate(const File);
+
+    ActionResult startHandlingDownloadRequests();
+
+    ActionResult requestFile(std::string);
 
     /// Destruktor
     virtual ~P2PNode();

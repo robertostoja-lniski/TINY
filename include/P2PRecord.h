@@ -15,7 +15,7 @@
 #include "File.h"
 
 /// @enum Rezultat operacji na rekordzie
-enum RecordOperationResult{
+enum RecordOperationResult {
     SUCCESS = 0,
     FILE_NOT_FOUND = 1,
 };
@@ -35,7 +35,7 @@ class P2PRecord {
 
 private:
     /// Set plików
-    std::set< File > fileSet;
+    std::set<File> fileSet;
 
     /// Mutex używany do synchronizacji zapis-odczyt setu plików
     std::shared_mutex mutex;

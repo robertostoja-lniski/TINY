@@ -13,7 +13,7 @@ AddGlobalFileResult P2PFiles::add(std::string node, File file) {
     std::unique_lock<std::shared_mutex> lk(mutex);
 
     auto it = filesRevokedByMe.find(file);
-    if(it == filesRevokedByMe.end()) {
+    if (it == filesRevokedByMe.end()) {
         // jeśli nie ma pliku na liście unieważnionych, to dodaj plik
         files[node].addFile(std::move(file));
         return ADD_GLOBAL_SUCCESS;
@@ -26,7 +26,7 @@ void P2PFiles::revoke(File file) {
     std::unique_lock<std::shared_mutex> lk(mutex);
 
     // usuń plik z każdego węzła
-    for(auto &record : files){
+    for (auto &record : files) {
         record.second.removeFile(file);
     }
 
