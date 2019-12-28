@@ -115,9 +115,6 @@ public:
     /// Dodaje do katalogu roboczego, a następnie uploaduje plik do lokalnego setu
     FileOperationResult put(std::string);
 
-    /// Usuwa plik z systemu, ale nie z workspace
-    FileOperationResult removeFileFromSystem(std::string);
-
     /// Usuwa plik z workspace, jesli taki istnieje
     FileOperationResult removeFile(std::string);
 
