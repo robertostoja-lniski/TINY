@@ -28,8 +28,8 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), h
         localFiles.addFile(restoredFile);
     }
 
-    startBroadcastingFiles();
-    startReceivingBroadcastingFiles();
+//    startBroadcastingFiles();
+//    startReceivingBroadcastingFiles();
 }
 
 ActionResult P2PNode::uploadFile(std::string uploadFileName) {
@@ -159,8 +159,8 @@ P2PNode::~P2PNode() {
     broadcast.exitMutex.unlock();
 
     // Poczekaj aż broadczast się skończy
-    broadcast.sendThread.join();
-    broadcast.recvThread.join();
+//    broadcast.sendThread.join();
+//    broadcast.recvThread.join();
 
     // Zamknij gniazdo broadcastowe
     close(broadcast.socketFd);
