@@ -30,7 +30,7 @@ struct fileRequest {
     // dodac limity na
     char fileName[MAX_FILENAME_LEN];
     unsigned long long offset;
-    unsigned long long bytesCount;
+    unsigned long long bytes;
 };
 
 /// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
@@ -129,10 +129,10 @@ public:
 
     ActionResult startHandlingDownloadRequests();
 
-    ActionResult requestFile(std::string);
-
     /// Destruktor
     virtual ~P2PNode();
+
+    void f(fileRequest request, std::string ip_addr);
 };
 
 #endif //TINY_P2PNODE_H

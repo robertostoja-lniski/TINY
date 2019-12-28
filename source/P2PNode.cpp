@@ -13,7 +13,10 @@
 #include <sstream>
 #include <cstring>
 #include <stdexcept>
+
 #include <LocalSystemHandler.h>
+#include <algorithm>
+zaimplementowane żądania i odbior fragmentu pliku
 
 P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), handler(handler) {
 
@@ -172,8 +175,7 @@ void P2PNode::handleDownloadRequests() {
 // socket create and verification
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
-        printf("tcp socket creation failed...\n");
-        exit(0);
+        throw std::runtime_error("socket creation failed...\n");
     }
     struct sockaddr_in servaddr{};
 
@@ -183,14 +185,12 @@ void P2PNode::handleDownloadRequests() {
 
     // Binding newly created socket to given IP and verification
     if ((bind(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr))) != 0) {
-        printf("socket bind failed...\n");
-        exit(0);
+        throw std::runtime_error("socket bind failed...\n");
     }
 
     // Now server is ready to listen and verification
     if ((listen(sockfd, MAX_TCP_CONNECTIONS)) != 0) {
-        printf("Listen failed...\n");
-        exit(0);
+        throw std::runtime_error("Listen failed...\n");
     }
 
 #pragma clang diagnostic push
@@ -202,38 +202,33 @@ void P2PNode::handleDownloadRequests() {
 
         int clientFD = accept(sockfd, (sockaddr *) &cli, &len);
         if (clientFD < 0) {
-            printf("server acccept failed...\n");
-            exit(0);
+            throw std::runtime_error("server acccept failed...\n");
         }
 
         char buff[sizeof(fileRequest)];
 
         if (recv(clientFD, buff, sizeof(buff), 0) <= 0) {
-            perror("recv() ERROR");
-            exit(5);
+            throw std::runtime_error("recv() ERROR");
         }
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCDFAInspection"
         auto request = (fileRequest *) buff;
 #pragma clang diagnostic pop
-        std::cout << " " << request->fileName << " " << request->bytesCount << " " << request->offset << std::endl;
+        std::cout << request->fileName << " " << request->bytes << " " << request->offset << std::endl;
 
-        char path[200];
-        strcpy(path, "/home/");
-        strcat(path, userName.c_str());
-        strcat(path, "/.P2Pworkspace/");
-        strcat(path, request->fileName);
+        std::string path = "/home/" + userName + "/.P2Pworkspace/" + request->fileName;
 
 
-        int fileFD = open(path, 0);
+        int fileFD = open(path.c_str(), 0);
         if (fileFD < 0) {
-            printf("Zadany plik nie istnieje.\n");
+            printf("Żądano pliku, który nie istnieje.\n");
             close(clientFD);
             continue;
         }
 
-        std::thread t1(&P2PNode::sendFile, this, fileFD, clientFD, request->offset, request->bytesCount);
+        std::cout << "Wysylam plik " << request->fileName << "\n";
+        std::thread t1(&P2PNode::sendFile, this, fileFD, clientFD, request->offset, request->bytes);
         t1.detach();
     }
 #pragma clang diagnostic pop
@@ -250,13 +245,51 @@ ActionResult P2PNode::startHandlingDownloadRequests() {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::requestFile(const std::string) {
+void P2PNode::f(fileRequest request, std::string ip_addr) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == -1) {
+        throw std::runtime_error("socket creation failed...\n");
+    }
 
+    struct sockaddr_in servaddr{};
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = inet_addr(ip_addr.c_str());
+    servaddr.sin_port = htons(tcpPort);
 
-    fileRequest request = {
+    // connect the client socket to server socket
+    if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
+        throw std::runtime_error("connection with the server failed...\n");
+    }
 
-    };
-    return ACTION_NOT_HANDLED;
+    std::cout << sizeof(request);
+    if(write(sockfd, &request, sizeof(request))  < sizeof(request)){
+        throw std::runtime_error("write failed\n");
+    }
+
+    std::string path = "/home/" + userName + "/.P2Pworkspace/" + request.fileName;
+    int fd = open(path.c_str(), O_WRONLY);
+    if (fd < 0) {
+        throw std::runtime_error("open failed\n");
+    }
+
+    if(lseek(fd, request.offset, SEEK_SET) < request.offset){
+        throw std::runtime_error("lseek failed\n");
+    }
+    // 4 MB
+    char buff[4096*1024];
+    unsigned long long bytesReceived = 0;
+    while (bytesReceived < request.bytes) {
+        ssize_t bytesToRead = std::min(request.bytes - bytesReceived, (unsigned long long)4096 * 1024);
+        ssize_t bytesRead = read(sockfd, buff, bytesToRead);
+        if (bytesRead < 0) {
+            throw std::runtime_error("read failed\n");
+        }
+        bytesReceived += bytesRead;
+
+        if (write(fd, buff, bytesRead) < bytesRead) {
+            throw std::runtime_error("write failed\n");
+        }
+    }
 }
 
 ActionResult P2PNode::prepareForBroadcast(bool restart) {
