@@ -10,7 +10,7 @@
 #include <future>
 
 #define MAX_USERNAME_LEN 40
-#define MAX_FILENAME_LEN 50
+#define MAX_FILENAME_LEN 500
 #define MAX_TCP_CONNECTIONS 5
 
 /**
@@ -132,7 +132,7 @@ public:
     /// Destruktor
     virtual ~P2PNode();
 
-    void f(fileRequest request, std::string ip_addr);
+    void requestAndDownloadFileFragment(fileRequest request, std::string ip_addr);
 };
 
 #endif //TINY_P2PNODE_H

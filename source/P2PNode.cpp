@@ -167,8 +167,32 @@ P2PNode::~P2PNode() {
 }
 
 
-void P2PNode::sendFile(int fileFD, int clientFD, unsigned long long offset, unsigned long long bytesCount) {
-    std::cout << "send file, jeszcze nie zaimplementowane\n";
+void P2PNode::sendFile(int fileFD, int clientFD, unsigned long long offset, unsigned long long bytes) {
+
+    char buff[4096*1024];
+    unsigned long long bytesSent = 0;
+
+    if (lseek(fileFD, offset, SEEK_SET) < 0){
+        throw std::runtime_error("lseek failed\n");
+    }
+
+    while (bytesSent < bytes) {
+        ssize_t bytesToRead = std::min(bytes - bytesSent, (unsigned long long)4096 * 1024);
+        ssize_t bytesRead = read(fileFD, buff, bytesToRead);
+        if (bytesRead < 0) {
+            throw std::runtime_error("read failed\n");
+        }
+        bytesSent += bytesRead;
+
+        if (write(clientFD, buff, bytesRead) < bytesRead) {
+            throw std::runtime_error("write failed\n");
+        }
+
+    }
+
+    close(clientFD);
+    close(fileFD);
+
 }
 
 void P2PNode::handleDownloadRequests() {
@@ -217,8 +241,9 @@ void P2PNode::handleDownloadRequests() {
 #pragma clang diagnostic pop
         std::cout << request->fileName << " " << request->bytes << " " << request->offset << std::endl;
 
+        // TODO moze local system handler bedzie ustawial prefix do workspace jako pole Node'a
         std::string path = "/home/" + userName + "/.P2Pworkspace/" + request->fileName;
-
+        std::cout << path << std::endl;
 
         int fileFD = open(path.c_str(), 0);
         if (fileFD < 0) {
@@ -245,7 +270,7 @@ ActionResult P2PNode::startHandlingDownloadRequests() {
     return ACTION_SUCCESS;
 }
 
-void P2PNode::f(fileRequest request, std::string ip_addr) {
+void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip_addr) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
         throw std::runtime_error("socket creation failed...\n");
