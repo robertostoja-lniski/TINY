@@ -81,6 +81,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
     broadcast.sendThread = std::thread([this]() {
         int failuresCount = 0;
         while (true) {
+            std::cout << "Boom\n";
             // Sprawdzenie warunku czy wychodzimy z petli
             broadcast.exitMutex.lock();
             if (broadcast.exit) {
@@ -91,14 +92,15 @@ ActionResult P2PNode::startBroadcastingFiles() {
 
             auto communicates = localFiles.getBroadcastCommunicates();
             for (auto c: communicates) {
-                char filesCount[2];
-                std::memcpy(filesCount, &(c.first), 2);
-                std::string str = (char) UDP_BROADCAST + userName + '\n' + filesCount + c.second;
+
+                std::string str = (char) UDP_BROADCAST + userName + '\n' + std::to_string(c.first) + c.second;
                 // jeżeli jest niezerowa liczba plików, to wysyłaj
                 if (c.first > 0) {
                     while (send(broadcast.socketFd, str.c_str(), (int) str.length(), 0) < (int) str.length()) {
+                        std::cout << "Boom2\n";
                         if (++failuresCount > 10) {
                             while (prepareForBroadcast(true) != ACTION_SUCCESS) {
+                                std::cout << "Boom3\n";
                                 // Sprawdzenie warunku czy wychodzimy z petli
                                 broadcast.exitMutex.lock();
                                 if (broadcast.exit) {
@@ -111,12 +113,14 @@ ActionResult P2PNode::startBroadcastingFiles() {
                             }
                             failuresCount = 0;
                         }
+
                     }
                 }
             }
         }
     });
 
+    std::cout << "Started\n";
     // wątek 'łapany' w destruktorze
     return ACTION_SUCCESS;
 }
@@ -296,6 +300,7 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
     broadcast.recvThread = std::thread([this]() {
         char buf[16 * 1024];
         while (true) {
+            std::cout << "Poom\n";
             // Sprawdzenie warunku czy wychodzimy z petli
             broadcast.exitMutex.lock();
             if (broadcast.exit) {
@@ -335,6 +340,7 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
         }
     });
 
+    std::cout << "Received started\n";
     // wątek 'łapany' w destruktorze
     return ACTION_SUCCESS;
 }
