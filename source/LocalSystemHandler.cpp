@@ -69,35 +69,7 @@ FileOperationResult LocalSystemHandler::showLocalFiles() {
 
 FileOperationResult LocalSystemHandler::removeFile(std::string fileToRemove) {
 
-    FileOperationResult ret = removeFileFromSystem(fileToRemove);
-    if (ret != FILE_SUCCESS) {
-        std::cout << "Usuwanie przerwane.\n";
-        return ret;
-    }
-
     std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + fileToRemove;
-    // w przeciwnym wypadku usuwa plik z folderu
-
-    if (p2PNode.revoke(fileToRemove) != ACTION_SUCCESS) {
-        std::cout << "Uniewaznienie nie powiodlo sie\n";
-        return FILE_CANNOT_REMOVE_FROM_SYSTEM;
-    }
-
-    if (remove(fullPathToFile.c_str())) {
-        std::cout << "Usuniecie nie powiodlo sie\n";
-        // jesli nie mozna usunac z workspace'a, przywroc do systemu
-        p2PNode.uploadFile(fileToRemove);
-        return FILE_CANNOT_REMOVE_FROM_WORKSPACE;
-    }
-
-    // usuwa z pliku konfiguracyjnego
-    std::cout << "Dowiazanie do pliku zostalo usuniete \n";
-    return FILE_SUCCESS;
-}
-
-FileOperationResult LocalSystemHandler::removeFileFromSystem(std::string fileToRevoke) {
-
-    std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + fileToRevoke;
     if (!filesys::exists(fullPathToFile)) {
         std::cout << "Nieistniejaca sciezka\n";
         return FILE_DOES_NOT_EXIST;
@@ -108,19 +80,30 @@ FileOperationResult LocalSystemHandler::removeFileFromSystem(std::string fileToR
         return FILE_NOT_REGULAR_FILE;
     }
 
-    if (p2PNode.revoke(fileToRevoke) != ACTION_SUCCESS) {
+    if (p2PNode.revoke(fileToRemove) != ACTION_SUCCESS) {
         return FILE_CANNOT_REMOVE_FROM_SYSTEM;
     }
 
-    if (updateConfig(fileToRevoke, CONFIG_REMOVE) != FILE_SUCCESS) {
+    if (updateConfig(fileToRemove, CONFIG_REMOVE) != FILE_SUCCESS) {
         std::cout << "Plik nie mogl zostac usuniety z pliku konfiguracyjengo\n";
         std::cout << "Usuwanie nie powiodlo sie\n";
 
-        p2PNode.uploadFile(fileToRevoke);
+        p2PNode.uploadFile(fileToRemove);
         return FILE_CANNOT_REMOVE_FROM_CONFIG;
     }
 
-    std::cout << "Plik " << fileToRevoke << " zostal usuniety z systemu\n";
+    std::cout << "Plik " << fileToRemove << " zostal usuniety z systemu\n";
+    // w przeciwnym wypadku usuwa plik z folderu
+
+    if (remove(fullPathToFile.c_str())) {
+        std::cout << "Usuniecie nie powiodlo sie\n";
+        // jesli nie mozna usunac z workspace'a, przywroc do systemu
+        p2PNode.uploadFile(fileToRemove);
+        return FILE_CANNOT_REMOVE_FROM_WORKSPACE;
+    }
+
+    // usuwa z pliku konfiguracyjnego
+    std::cout << "Dowiazanie do pliku zostalo usuniete \n";
     return FILE_SUCCESS;
 }
 
