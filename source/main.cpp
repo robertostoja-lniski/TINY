@@ -5,9 +5,9 @@
 int main() {
     try {
 
-        P2PNode node(1234);
-        LocalSystemHandler systemHandler(node);
-        UserRequestHandler requestHandler(systemHandler);
+        LocalSystemHandler systemHandler;
+        P2PNode node(1234, systemHandler);
+        UserRequestHandler requestHandler(node);
         node.startHandlingDownloadRequests();
         requestHandler.waitForRequest();
     }

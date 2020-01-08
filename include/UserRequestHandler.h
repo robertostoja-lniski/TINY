@@ -9,8 +9,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-
-#include "LocalSystemHandler.h"
+#include "P2PNode.h"
 
 /// @enum typ zapytania
 enum RequestType {
@@ -23,12 +22,6 @@ enum RequestType {
 enum RequestResult {
     REQUEST_SUCCESS = 0,
     REQUEST_FAILURE = 1,
-};
-
-/// @enum typ wypisywania
-enum LsType {
-    WO_OWNER = 0, /// nie wyświetla właścicieli plików
-    W_OWNER = 1,  ///     wyświetla właścicieli plików
 };
 
 /** @class
@@ -45,8 +38,7 @@ private:
     /// Podwójne komendy
     const std::vector<std::string> doubleCommandsPrefix = {"get", "add", "put", "rm"};
 
-    /// Lokalny kontroler systemu
-    LocalSystemHandler &localSystemHandler;
+    P2PNode &node;
 
     /**
      *  Sprawdza czy pierwszy parametr jest poleceniem
@@ -68,11 +60,11 @@ private:
 
     static void printHelp();
 
-    static void printErrorMessage();
+    static void printUnknownCommandMsg();
 
 public:
     /// Konstruktor
-    explicit UserRequestHandler(LocalSystemHandler &systemHandler);
+    explicit UserRequestHandler(P2PNode &node);
 
     /// Odbiera komendy i je przetwarza
     void waitForRequest();

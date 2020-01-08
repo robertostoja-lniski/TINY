@@ -27,6 +27,7 @@ void P2PRecord::print() {
         std::cout << "Nie posiadasz plikow w systemie\n";
     }
     for (auto item : fileSet) {
+
         std::cout << item.getName() << " ( owner: " << item.getOwner() << " )\n";
     }
     mutex.unlock_shared();

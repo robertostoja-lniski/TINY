@@ -2,19 +2,19 @@
 
 RequestResult UserRequestHandler::processRequest(const std::string &request) {
 
-    FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
+    ActionResult ret = ACTION_NO_EFFECT;
 
     if (request == "ls-my") {
-        ret = localSystemHandler.showLocalFiles();
+        ret = node.showLocalFiles();
 
     } else if (request == "ls") {
-        ret = localSystemHandler.showGlobalFiles(WO_OWNER);
+        ret = node.showGlobalFiles(DO_NOT_PRINT_OWNERS);
 
     } else if (request == "ls-owner") {
-        ret = localSystemHandler.showGlobalFiles(W_OWNER);
+        ret = node.showGlobalFiles(PRINT_OWNERS);
     }
 
-    if (ret != FILE_SUCCESS) {
+    if (ret != ACTION_SUCCESS) {
         std::cout << "Polecenie " << request << " nie zostalo wykonane\n";
         return REQUEST_FAILURE;
     }
@@ -24,19 +24,19 @@ RequestResult UserRequestHandler::processRequest(const std::string &request) {
 
 RequestResult UserRequestHandler::processRequest(const std::string &requestPrefix, const std::string &requestSufix) {
 
-    FileOperationResult ret = FILE_OPERATION_NOT_HANDLED;
+    ActionResult ret = ACTION_NO_EFFECT;
 
     if (requestPrefix == "get") {
-        ret = localSystemHandler.download(requestSufix);
+        ret = node.downloadFile(requestSufix);
 
     } else if (requestPrefix == "put") {
-        ret = localSystemHandler.put(requestSufix);
+        ret = node.uploadFile(requestSufix);
 
     } else if (requestPrefix == "rm") {
-        ret = localSystemHandler.removeFile(requestSufix);
+        ret = node.removeFile(requestSufix);
     }
 
-    if (ret != FILE_SUCCESS) {
+    if (ret != ACTION_SUCCESS) {
         std::cout << "Nie udalo sie wykonac polecenia " << requestPrefix << "\n";
         return REQUEST_FAILURE;
     }
@@ -69,7 +69,7 @@ void UserRequestHandler::waitForRequest() {
         RequestType requestType = preprocessRequest(userInput, requestPrefix, requestSufix);
 
         if (requestType == NOT_A_REQUEST) {
-            printErrorMessage();
+            printUnknownCommandMsg();
             printHelp();
             continue;
         }
@@ -134,10 +134,10 @@ UserRequestHandler::preprocessRequest(std::string userInput, std::string &reques
     return NOT_A_REQUEST;
 }
 
-void UserRequestHandler::printErrorMessage() {
+void UserRequestHandler::printUnknownCommandMsg() {
     std::cout << "Nieznana komenda - wybierz jedna z ponizszych\n";
 }
 
-UserRequestHandler::UserRequestHandler(LocalSystemHandler &systemHandler) : localSystemHandler(systemHandler) {
+UserRequestHandler::UserRequestHandler(P2PNode &node) : node(node) {
 
 }
