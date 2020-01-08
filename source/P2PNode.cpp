@@ -13,14 +13,17 @@
 #include <sstream>
 #include <cstring>
 #include <stdexcept>
+#include <LocalSystemHandler.h>
 
-P2PNode::P2PNode(int tcpPort) : tcpPort(tcpPort) {
-    char linuxName[MAX_USERNAME_LEN];
+P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), handler(handler) {
 
-    if (getlogin_r(linuxName, MAX_USERNAME_LEN)) {
-        throw std::runtime_error("nie mozna pobrac nazwy uzytkownika unix");
+    handler.setDefaultWorkspace();
+    std::vector<std::string> filesNamesToReUpload = handler.getPreviousState();
+
+    for(auto fileName : filesNamesToReUpload) {
+        File restoredFile(fileName, handler.getUserName());
+        localFiles.addFile(restoredFile);
     }
-    userName = std::string(linuxName);
 
     startBroadcastingFiles();
     startReceivingBroadcastingFiles();
@@ -28,25 +31,38 @@ P2PNode::P2PNode(int tcpPort) : tcpPort(tcpPort) {
 
 ActionResult P2PNode::uploadFile(std::string uploadFileName) {
 
-    File file(std::move(uploadFileName), userName);
+    if(handler.addFileToLocalSystem(uploadFileName) != FILE_SUCCESS){
+        return ACTION_FAILURE;
+    }
+
+    std::string systemFileName = handler.getLastTokenOf(uploadFileName);
+    File file(systemFileName, handler.getUserName());
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
     AddFileResult ret = localFiles.addFile(file);
-    if (ret == ADD_ALREADY_EXISTS) {
-        return ACTION_NO_EFFECT;
+    if (ret != ADD_SUCCESS) {
+        return ACTION_FAILURE;
     }
 
-    if (ret == ADD_SUCCESS) {
-        return ACTION_SUCCESS;
+    if(handler.updateConfig(systemFileName, CONFIG_ADD) != FILE_SUCCESS){
+        return ACTION_FAILURE;
     }
+
+    std::cout << "Plik " << uploadFileName << " zostal dodany do systemu\n";
+    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::showLocalFiles() {
     localFiles.print();
 }
 
-ActionResult P2PNode::revoke(std::string revokeFileName) {
-    File tmp(std::move(revokeFileName), userName);
+ActionResult P2PNode::removeFile(std::string revokeFileName) {
+
+    if(!handler.isNetworkFilePathCorrect(revokeFileName)) {
+        return ACTION_FAILURE;
+    }
+
+    File tmp(revokeFileName, userName);
 
     if (localFiles.removeFile(tmp) != SUCCESS) {
         return ACTION_FAILURE;
@@ -55,7 +71,18 @@ ActionResult P2PNode::revoke(std::string revokeFileName) {
     globalFiles.revoke(tmp);
     globalFiles.addToFilesRevokedByMe(tmp);
 
-    return sendRevokeCommunicate(std::move(tmp));
+    //// TODO
+//    if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
+//        uploadFile(revokeFileName);
+//        return ACTION_FAILURE;
+//    }
+
+    if(handler.removeFileFromLocalSystem(revokeFileName) != FILE_SUCCESS) {
+        uploadFile(revokeFileName);
+        return ACTION_FAILURE;
+    }
+
+    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::downloadFile(const std::string &) {
@@ -66,7 +93,7 @@ ActionResult P2PNode::updateLocalFiles(void) {
     return ACTION_NOT_HANDLED;
 }
 
-ActionResult P2PNode::showGlobalFiles(void) {
+ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
     return ACTION_NOT_HANDLED;
 }
 
@@ -338,9 +365,6 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
     return ACTION_SUCCESS;
 }
 
-std::string P2PNode::getUserName() {
-    return userName;
-}
 
 
 

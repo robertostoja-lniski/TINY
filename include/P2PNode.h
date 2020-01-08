@@ -6,6 +6,7 @@
 #include <mutex>
 #include "P2PRecord.h"
 #include "P2PFiles.h"
+#include "LocalSystemHandler.h"
 #include <future>
 
 #define MAX_USERNAME_LEN 40
@@ -39,6 +40,10 @@ enum UDPCommunicateType {
 
 };
 
+enum SHOW_GLOBAL_FILE_TYPE {
+    DO_NOT_PRINT_OWNERS = 0,
+    PRINT_OWNERS = 1,
+};
 /**
  * @class
  * Reprezentuje węzeł sieci P2P.
@@ -56,6 +61,7 @@ private:
     /// Pliki lokalne.
     P2PRecord localFiles;
 
+    LocalSystemHandler& handler;
     /// Port, na ktorym sluchamy na zadania transferu plikow
     int tcpPort;
 
@@ -90,15 +96,12 @@ private:
 
 public:
 
-    std::string getUserName();
-
-    explicit P2PNode(int);
+    explicit P2PNode(int, LocalSystemHandler&);
 
     // uniewaznia plik
-    ActionResult revoke(std::string);
 
     // pokazuje pliki w sytemie
-    ActionResult showGlobalFiles(void);
+    ActionResult showGlobalFiles(SHOW_GLOBAL_FILE_TYPE);
 
     // zmienia tablice lokalnych plikow jesli pojawil sie nowy
     ActionResult updateLocalFiles(void);
@@ -114,6 +117,9 @@ public:
 
     /// Wrzuca plik do lokalnego systemu
     ActionResult uploadFile(std::string);
+
+    /// Usuwa plik z lokalnego systemu
+    ActionResult removeFile(std::string);
 
     /// Pokazuje pliki lokalne
     ActionResult showLocalFiles();

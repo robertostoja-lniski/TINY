@@ -1,32 +1,47 @@
 #include "LocalSystemHandler.h"
 #include "P2PNode.h"
 
-LocalSystemHandler::LocalSystemHandler(P2PNode &p2PNode) : p2PNode(p2PNode) {
-    setDefaultWorkspace();
-    restorePreviousState();
-}
+LocalSystemHandler::LocalSystemHandler() {}
 
+std::string LocalSystemHandler::getUserName() {
+    char linuxName[MAX_USERNAME_LEN];
+
+    if (getlogin_r(linuxName, MAX_USERNAME_LEN)) {
+        throw std::runtime_error("nie mozna pobrac nazwy uzytkownika unix");
+    }
+
+    return {linuxName};
+}
 /*
  * API wzialem z
  * https://thispointer.com/c-check-if-given-path-is-a-file-or-directory-using-boost-c17-filesystem-library/
  */
-FileOperationResult LocalSystemHandler::put(std::string filepath) {
+
+std::string LocalSystemHandler::getLastTokenOf(std::string filepath) {
+    std::string filename = filepath;
+    const size_t cut_index = filepath.find_last_of("\\/");
+    if (std::string::npos != cut_index) {
+        filename = filename.erase(0, cut_index + 1);
+    }
+    return filename;
+}
+bool LocalSystemHandler::isFsFilePathCorrect(std::string filepath) {
 
     // sciezki powinne rozrozniac uzytkownikow
     // inne nie powinny byc akceptowane
     if (filepath[0] == '~') {
 
-        filepath = "/home/" + p2PNode.getUserName() + filepath.substr(1, filepath.size());
+        filepath = "/home/" + getUserName() + filepath.substr(1, filepath.size());
     }
 
     if (!filesys::exists(filepath)) {
         std::cout << "Nieistniejaca sciezka\n";
-        return FILE_DOES_NOT_EXIST;
+        return false;
     }
 
     if (!filesys::is_regular_file(filepath)) {
         std::cout << "To nie plik\n";
-        return FILE_NOT_REGULAR_FILE;
+        return false;
     }
 
     // w przeciwnym wypadku utworz link z folderu roboczego
@@ -34,7 +49,31 @@ FileOperationResult LocalSystemHandler::put(std::string filepath) {
 
     if (!filesys::exists(workspaceUpperDirPath)) {
         std::cout << "Folder roboczy nie istnieje\n";
-        return FILE_WORKSPACE_NOT_EXIST;
+        return false;
+    }
+
+    return true;
+}
+
+bool LocalSystemHandler::isNetworkFilePathCorrect(std::string filepath) {
+
+    std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + filepath;
+    if (!filesys::exists(fullPathToFile)) {
+        std::cout << "Nieistniejaca sciezka\n";
+        return false;
+    }
+
+    if (!filesys::is_regular_file(fullPathToFile)) {
+        std::cout << "To nie plik\n";
+        return false;
+    }
+    return true;
+}
+
+FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepath) {
+
+    if(!isFsFilePathCorrect(filepath)) {
+        return FILE_PATH_CORRUPTED;
     }
 
     // znajdz nazwe pliku do utworzenia sciezki
@@ -46,49 +85,25 @@ FileOperationResult LocalSystemHandler::put(std::string filepath) {
         filename = filename.erase(0, cut_index + 1);
     }
 
-    if (link(filepath.c_str(), (workspaceUpperDirPath + workspaceDirName + filename).c_str()) != 0) {
-        std::cout << "Link sie nie powiodl, plik o takiej nazwie juz istnieje\n";
-        return FILE_LINK_ERROR;
-    }
-
-    // dodaj do systemu
-    FileOperationResult ret = upload(filename);
-    if (ret != FILE_SUCCESS) {
-        return ret;
+    std::string linkPath = workspaceUpperDirPath + workspaceDirName + filename;
+    std::string test = linkPath + "a";
+    if (link(filepath.c_str(), linkPath.c_str()) != 0) {
+        std::cout << "Link sie nie powiodl, taki plik istnieje albo wystapil blad w sciezce\n";
+        return FILE_CANNOT_ADD_TO_WORKSPACE;
     }
 
     return FILE_SUCCESS;
+    // should be uploaded
 }
 
-FileOperationResult LocalSystemHandler::showLocalFiles() {
 
-    if (p2PNode.showLocalFiles() != ACTION_SUCCESS) {
-        return FILE_SHOW_NAME_ERROR;
-    }
-}
-
-FileOperationResult LocalSystemHandler::removeFile(std::string fileToRemove) {
+FileOperationResult LocalSystemHandler::removeFileFromLocalSystem(std::string fileToRemove) {
 
     std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + fileToRemove;
-    if (!filesys::exists(fullPathToFile)) {
-        std::cout << "Nieistniejaca sciezka\n";
-        return FILE_DOES_NOT_EXIST;
-    }
-
-    if (!filesys::is_regular_file(fullPathToFile)) {
-        std::cout << "To nie plik\n";
-        return FILE_NOT_REGULAR_FILE;
-    }
-
-    if (p2PNode.revoke(fileToRemove) != ACTION_SUCCESS) {
-        return FILE_CANNOT_REMOVE_FROM_SYSTEM;
-    }
 
     if (updateConfig(fileToRemove, CONFIG_REMOVE) != FILE_SUCCESS) {
         std::cout << "Plik nie mogl zostac usuniety z pliku konfiguracyjengo\n";
         std::cout << "Usuwanie nie powiodlo sie\n";
-
-        p2PNode.uploadFile(fileToRemove);
         return FILE_CANNOT_REMOVE_FROM_CONFIG;
     }
 
@@ -98,7 +113,6 @@ FileOperationResult LocalSystemHandler::removeFile(std::string fileToRemove) {
     if (remove(fullPathToFile.c_str())) {
         std::cout << "Usuniecie nie powiodlo sie\n";
         // jesli nie mozna usunac z workspace'a, przywroc do systemu
-        p2PNode.uploadFile(fileToRemove);
         return FILE_CANNOT_REMOVE_FROM_WORKSPACE;
     }
 
@@ -107,50 +121,9 @@ FileOperationResult LocalSystemHandler::removeFile(std::string fileToRemove) {
     return FILE_SUCCESS;
 }
 
-FileOperationResult LocalSystemHandler::upload(std::string fileToAdd) {
-
-    // na wszelki wypadek sprawdz, czy plik dalej istnieje
-    std::string fullPathToFile = workspaceUpperDirPath + fileToAdd;
-    if (!filesys::exists(fullPathToFile)) {
-        std::cout << "Nieistniejaca sciezka\n";
-        return FILE_DOES_NOT_EXIST;
-    }
-
-    if (!filesys::is_regular_file(fullPathToFile)) {
-        std::cout << "To nie plik\n";
-        return FILE_NOT_REGULAR_FILE;
-    }
-
-    ActionResult ret = p2PNode.uploadFile(fileToAdd);
-
-    if (ret == ACTION_NO_EFFECT) {
-        std::cout << "Plik " << fileToAdd << " juz istnial w systemie\n";
-        return FILE_SUCCESS;
-
-    } else if (ret != ACTION_SUCCESS) {
-        return FILE_CANNOT_ADD_TO_SYSTEM;
-    }
-
-    // dodaje informacje do pliku konfiguracyjnego
-    // o tym, ze plik zostanie udostepniony
-
-    updateConfig(fileToAdd, CONFIG_ADD);
-    std::cout << "Plik " << fileToAdd << " zostal dodany do systemu\n";
-    return FILE_SUCCESS;
-}
-
-FileOperationResult LocalSystemHandler::download(std::string) {
-    return FILE_OPERATION_NOT_HANDLED;
-}
-
-FileOperationResult LocalSystemHandler::showGlobalFiles(bool printOwner) {
-    return FILE_OPERATION_NOT_HANDLED;
-}
-
 DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
 
-
-    std::string defaultWorkspacePath = "/home/" + p2PNode.getUserName() + "/";
+    std::string defaultWorkspacePath = "/home/" + getUserName() + "/";
 
     // if workspace exists it is treated as success
     if (filesys::exists(defaultWorkspacePath)) {
@@ -169,18 +142,11 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
     return DIR_CANNOT_CREATE;
 }
 
-FileOperationResult LocalSystemHandler::restorePreviousState() {
+std::vector<std::string> LocalSystemHandler::getPreviousState() {
 
     std::string fullConfigFilePath = workspaceUpperDirPath + workspaceDirName + configFileName;
-    if (!filesys::exists(fullConfigFilePath)) {
-        // tworzy plik konfiguracyjny
-        std::ofstream output(fullConfigFilePath);
-        return FILE_SUCCESS;
-    }
-
-    if (!filesys::is_regular_file(fullConfigFilePath)) {
-        std::cout << "Plik konfiguracyjny nie jest regularnym plikiem\n";
-        return FILE_NOT_REGULAR_FILE;
+    if(!isFsFilePathCorrect(fullConfigFilePath)) {
+        throw std::runtime_error("Cannot read config file");
     }
 
     std::ofstream configFile;
@@ -194,35 +160,29 @@ FileOperationResult LocalSystemHandler::restorePreviousState() {
 
     // otwiera plik i iteruje po nim
     configFile.open(fullConfigFilePath, std::ios::in);
+    std::vector<std::string> filesToUpload;
 
     while (std::getline(infile, configRecord)) {
 
         std::istringstream iss(configRecord);
         if (!(iss >> fileName)) {
-            return FILE_CANNOT_READ;
+            throw std::runtime_error("Wrong config file");
         }
 
-        p2PNode.uploadFile(fileName);
+        filesToUpload.push_back(fileName);
     }
 
     configFile.close();
-
+    return filesToUpload;
 }
 
-FileOperationResult LocalSystemHandler::updateConfig(const std::string &name, ConfigOperation action) {
+FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, ConfigOperation action) {
 
     std::string fullConfigFilePath = workspaceUpperDirPath + workspaceDirName + configFileName;
 
-    if (!filesys::exists(fullConfigFilePath)) {
-        // jesli nie ma to stworz zamiast zglaszac blad.
-        std::ofstream output(fullConfigFilePath);
+    if(!isFsFilePathCorrect(fullConfigFilePath)){
+        return FILE_PATH_CORRUPTED;
     }
-
-    if (!filesys::is_regular_file(fullConfigFilePath)) {
-        std::cout << "Blad pliku konfiguracyjnego - zmiany nie zostana zapisane\n";
-        return FILE_NOT_REGULAR_FILE;
-    }
-
     // dopisz plik do pliku konfiguracyjnego
     std::ofstream configFile;
 
