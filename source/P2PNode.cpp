@@ -216,8 +216,8 @@ void P2PNode::handleDownloadRequests() {
         throw std::runtime_error("Listen failed...\n");
     }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (true) {
 
         struct sockaddr_in cli{};
@@ -234,10 +234,10 @@ void P2PNode::handleDownloadRequests() {
             throw std::runtime_error("recv() ERROR");
         }
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCDFAInspection"
+        #pragma clang diagnostic push
+        #pragma ide diagnostic ignored "OCDFAInspection"
         auto request = (fileRequest *) buff;
-#pragma clang diagnostic pop
+        #pragma clang diagnostic pop
         std::cout << request->fileName << " " << request->bytes << " " << request->offset << std::endl;
 
         // TODO moze local system handler bedzie ustawial prefix do workspace jako pole Node'a
@@ -255,7 +255,7 @@ void P2PNode::handleDownloadRequests() {
         std::thread t1(&P2PNode::sendFile, this, fileFD, clientFD, request->offset, request->bytes);
         t1.detach();
     }
-#pragma clang diagnostic pop
+    #pragma clang diagnostic pop
 }
 
 // wowolujemy metode p2pnode.handleDownlaodRequests na nowym watku
