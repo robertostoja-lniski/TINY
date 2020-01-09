@@ -56,27 +56,17 @@ RecordOperationResult P2PRecord::removeFile(File file) {
     return SUCCESS;
 }
 
-std::vector<std::pair<u_short, std::string>> P2PRecord::getBroadcastCommunicates() {
-    // maksymalna ilość plików w jednym komunikacie = 253
-    std::vector<std::pair<u_short, std::string>> vector;
-
-    u_short currentCommunicateSize = 0;
-    std::string currentCommunicateString = "";
-
+std::vector<File> P2PRecord::getFiles() {
+    std::vector<File> ret;
+    
     mutex.lock_shared();
-    for (auto file: fileSet) {
-        currentCommunicateString += file.getName() + '\t' + file.getOwner() + '\n';
-        // jeśli przekroczono limit liczby plików
-        if (++currentCommunicateSize == 253) {
-            vector.push_back(std::make_pair(currentCommunicateSize, currentCommunicateString));
-            currentCommunicateSize = 0;
-            currentCommunicateString = "";
-        }
+    
+    for(const auto file : fileSet){
+        ret.push_back(file);
     }
+    
     mutex.unlock_shared();
-    if (currentCommunicateSize != 0) {
-        vector.push_back(std::make_pair(currentCommunicateSize, currentCommunicateString));
-    }
-    return vector;
+    return ret;   
+
 }
 
