@@ -240,7 +240,7 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
 int LocalSystemHandler::createAndOpenFileInWorkspace(std::string name) {
     std::string path = workspaceAbsoluteDirPath + name;
     std::cout << path << "\n";
-    int fd = open(path.c_str(), O_CREAT | O_RDWR);
+    int fd = open(path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
     if (fd < 0) {
         throw std::runtime_error("file create failed\n");
     }
