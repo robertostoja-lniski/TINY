@@ -11,12 +11,12 @@ int main() {
         node.startHandlingDownloadRequests();
 
 
-        fileRequest request = {};
-        request.offset = 0,
-        request.bytes = 10,
-        strcpy(request.fileName, "a.txt");
-//        std::cout << request.fileName << "\n";
-        node.requestAndDownloadFileFragment(request, "192.168.43.242");
+//        fileRequest request = {};
+//        request.offset = 0,
+//        request.bytes = 10,
+//        strcpy(request.fileName, "file.txt");
+////        std::cout << request.fileName << "\n";
+//        node.requestAndDownloadFileFragment(request, "192.168.43.242");
 
         requestHandler.waitForRequest();
     }
