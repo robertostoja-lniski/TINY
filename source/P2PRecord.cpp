@@ -1,6 +1,8 @@
 #include <P2PRecord.h>
 #include <P2PNode.h>
 #include <vector>
+#include <FileBroadcastStruct.h>
+#include <memory>
 
 AddFileResult P2PRecord::addFile(File file) {
 
@@ -56,27 +58,23 @@ RecordOperationResult P2PRecord::removeFile(File file) {
     return SUCCESS;
 }
 
-std::vector<std::pair<u_short, std::string>> P2PRecord::getBroadcastCommunicates() {
+std::unique_ptr<std::vector<Communicate>> P2PRecord::getBroadcastCommunicates() {
     // maksymalna ilość plików w jednym komunikacie = 253
-    std::vector<std::pair<u_short, std::string>> vector;
-
-    u_short currentCommunicateSize = 0;
-    std::string currentCommunicateString = "";
+    auto communicates = std::make_unique<std::vector<Communicate>>();
 
     mutex.lock_shared();
+    communicates->push_back(Communicate());
+    auto &currentCommunicatesVector = communicates->back().files;
     for (auto file: fileSet) {
-        currentCommunicateString += file.getName() + '\t' + file.getOwner() + '\n';
-        // jeśli przekroczono limit liczby plików
-        if (++currentCommunicateSize == 253) {
-            vector.push_back(std::make_pair(currentCommunicateSize, currentCommunicateString));
-            currentCommunicateSize = 0;
-            currentCommunicateString = "";
+        FileBroadcastStruct fileBroadcastStruct(file.getName(), file.getOwner(), file.getSize());
+        currentCommunicatesVector.push_back(fileBroadcastStruct);
+        if (communicates->back().files.size() >= 256) {
+            communicates->push_back(Communicate());
+            currentCommunicatesVector = communicates->back().files;
+
         }
     }
     mutex.unlock_shared();
-    if (currentCommunicateSize != 0) {
-        vector.push_back(std::make_pair(currentCommunicateSize, currentCommunicateString));
-    }
-    return vector;
+    return communicates;
 }
 

@@ -90,7 +90,6 @@ private:
     /// @param restart czy restartujemy połączenie
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
     ActionResult prepareForBroadcast(bool restart = false);
-
 public:
 
     explicit P2PNode(int, LocalSystemHandler&);

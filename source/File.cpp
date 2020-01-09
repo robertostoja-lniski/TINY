@@ -26,3 +26,9 @@ void File::setOwner(const std::string owner) {
 void File::setName(const std::string name) {
     this->name = name;
 }
+
+File::File(FileBroadcastStruct &fileBroadcastStruct) {
+    name = fileBroadcastStruct.name;
+    owner = fileBroadcastStruct.owner;
+    size = fileBroadcastStruct.size;
+}
