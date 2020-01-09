@@ -62,7 +62,7 @@ private:
     const std::string configFileName = ".p2P.config";
 
     /// Nazwa katalogu nadrzędnego katalogu roboczego
-    std::string workspaceUpperDirPath;
+    std::string workspaceAbsoluteDirPath;
 
     //// sprawdza czy sciezka z systemu plikow jest poprawna
     bool isFsFilePathCorrect(std::string filepath);
@@ -94,7 +94,9 @@ public:
     //// zwraca nazwe uzytkownika w FS
     std::string getUserName();
 
-    int createAndOpenFile(std::string name);
+    int createAndOpenFileInWorkspace(std::string name);
+
+    int openFileFromWorkSpace(std::string name);
 };
 
 #endif //TINY_LOCALSYSTEMHANDLER_H

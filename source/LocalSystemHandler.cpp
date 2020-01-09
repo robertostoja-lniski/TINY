@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include "LocalSystemHandler.h"
 #include "P2PNode.h"
 
@@ -48,7 +49,7 @@ bool LocalSystemHandler::isFsFilePathCorrect(std::string filepath) {
     // w przeciwnym wypadku utworz link z folderu roboczego
     // ale najpierw sprawdz czy ten folder istnieje
 
-    if (!filesys::exists(workspaceUpperDirPath)) {
+    if (!filesys::exists(workspaceAbsoluteDirPath)) {
         std::cout << "Folder roboczy nie istnieje\n";
         return false;
     }
@@ -58,7 +59,7 @@ bool LocalSystemHandler::isFsFilePathCorrect(std::string filepath) {
 
 bool LocalSystemHandler::isNetworkFilePathCorrect(std::string filepath) {
 
-    std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + filepath;
+    std::string fullPathToFile = workspaceAbsoluteDirPath + workspaceDirName + filepath;
     if (!filesys::exists(fullPathToFile)) {
         std::cout << "Nieistniejaca sciezka\n";
         return false;
@@ -86,7 +87,7 @@ FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepat
         filename = filename.erase(0, cut_index + 1);
     }
 
-    std::string linkPath = workspaceUpperDirPath + filename;
+    std::string linkPath = workspaceAbsoluteDirPath + filename;
     std::string test = linkPath + "a";
     if (link(filepath.c_str(), linkPath.c_str()) != 0) {
         std::cout << "Link sie nie powiodl, taki plik istnieje albo wystapil blad w sciezce\n";
@@ -100,7 +101,7 @@ FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepat
 
 FileOperationResult LocalSystemHandler::removeFileFromLocalSystem(std::string fileToRemove) {
 
-    std::string fullPathToFile = workspaceUpperDirPath + workspaceDirName + fileToRemove;
+    std::string fullPathToFile = workspaceAbsoluteDirPath + workspaceDirName + fileToRemove;
 
     if (updateConfig(fileToRemove, CONFIG_REMOVE) != FILE_SUCCESS) {
         std::cout << "Plik nie mogl zostac usuniety z pliku konfiguracyjengo\n";
@@ -131,8 +132,8 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
         return DIR_CANNOT_CREATE;
     }
 
-    std::cout << "Folder roboczy: " << defaultWorkspacePath << "\n";
-    workspaceUpperDirPath = defaultWorkspacePath;
+    // std::cout << "Folder roboczy: " << defaultWorkspacePath << "\n";
+    workspaceAbsoluteDirPath = defaultWorkspacePath;
 
     std::ofstream conf(defaultWorkspacePath + configFileName);
 
@@ -143,7 +144,7 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
 
 std::vector<std::string> LocalSystemHandler::getPreviousState() {
 
-    std::string fullConfigFilePath = workspaceUpperDirPath + configFileName;
+    std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
     if(!isFsFilePathCorrect(fullConfigFilePath)) {
         throw std::runtime_error("Cannot read config file");
     }
@@ -177,7 +178,7 @@ std::vector<std::string> LocalSystemHandler::getPreviousState() {
 
 FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, ConfigOperation action) {
 
-    std::string fullConfigFilePath = workspaceUpperDirPath + workspaceDirName + configFileName;
+    std::string fullConfigFilePath = workspaceAbsoluteDirPath + workspaceDirName + configFileName;
 
     if(!isFsFilePathCorrect(fullConfigFilePath)){
         return FILE_PATH_CORRUPTED;
@@ -204,7 +205,7 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
         std::string fileName;
 
         // tworzy i otwiera plik do zapisu
-        std::string fullTmpConfigFilePath = workspaceUpperDirPath + workspaceDirName + "/.tmp" + configFileName;
+        std::string fullTmpConfigFilePath = workspaceAbsoluteDirPath + workspaceDirName + "/.tmp" + configFileName;
         configFile.open(fullTmpConfigFilePath, std::ios::out);
 
         while (std::getline(infile, configRecord)) {
@@ -236,12 +237,22 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
     return FILE_SUCCESS;
 }
 
-int LocalSystemHandler::createAndOpenFile(std::string name) {
-    std::string path = workspaceDirName + request.fileName;
-    int fd = open(path.c_str(), O_CREAT | O_RDWR);
+int LocalSystemHandler::createAndOpenFileInWorkspace(std::string name) {
+    std::string path = workspaceAbsoluteDirPath + name;
+    std::cout << path << "\n";
+    int fd = open(path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
     if (fd < 0) {
         throw std::runtime_error("file create failed\n");
     }
     return fd;
+}
+
+int LocalSystemHandler::openFileFromWorkSpace(std::string name) {
+    std::string path = workspaceAbsoluteDirPath + name;
+    int fileFD = open(path.c_str(), 0);
+    if (fileFD < 0) {
+        throw std::runtime_error("file open failed\n");
+    }
+    return fileFD;
 }
 
