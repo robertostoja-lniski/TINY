@@ -93,6 +93,8 @@ public:
 
     //// zwraca nazwe uzytkownika w FS
     std::string getUserName();
+
+    int createAndOpenFile(std::string name);
 };
 
 #endif //TINY_LOCALSYSTEMHANDLER_H
