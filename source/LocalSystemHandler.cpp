@@ -1,6 +1,7 @@
 #include "LocalSystemHandler.h"
 #include "P2PNode.h"
 
+
 LocalSystemHandler::LocalSystemHandler() {}
 
 std::string LocalSystemHandler::getUserName() {
@@ -233,5 +234,14 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
         }
     }
     return FILE_SUCCESS;
+}
+
+int LocalSystemHandler::createAndOpenFile(std::string name) {
+    std::string path = workspaceDirName + request.fileName;
+    int fd = open(path.c_str(), O_CREAT | O_RDWR);
+    if (fd < 0) {
+        throw std::runtime_error("file create failed\n");
+    }
+    return fd;
 }
 

@@ -290,11 +290,7 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
         throw std::runtime_error("write failed\n");
     }
 
-    std::string path = "/home/" + userName + "/.P2Pworkspace/" + request.fileName;
-    int fd = open(path.c_str(), O_WRONLY);
-    if (fd < 0) {
-        throw std::runtime_error("open failed\n");
-    }
+    fd = handler.createAndOpenFile(request.fileName)
 
     if(lseek(fd, request.offset, SEEK_SET) < request.offset){
         throw std::runtime_error("lseek failed\n");
