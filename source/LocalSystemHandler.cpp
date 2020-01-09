@@ -85,7 +85,7 @@ FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepat
         filename = filename.erase(0, cut_index + 1);
     }
 
-    std::string linkPath = workspaceUpperDirPath + workspaceDirName + filename;
+    std::string linkPath = workspaceUpperDirPath + filename;
     std::string test = linkPath + "a";
     if (link(filepath.c_str(), linkPath.c_str()) != 0) {
         std::cout << "Link sie nie powiodl, taki plik istnieje albo wystapil blad w sciezce\n";
@@ -123,28 +123,26 @@ FileOperationResult LocalSystemHandler::removeFileFromLocalSystem(std::string fi
 
 DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
 
-    std::string defaultWorkspacePath = "/home/" + getUserName() + "/";
+    std::string defaultWorkspacePath = "/home/" + getUserName() + "/" + workspaceDirName;
 
-    // if workspace exists it is treated as success
-    if (filesys::exists(defaultWorkspacePath)) {
-        workspaceUpperDirPath = defaultWorkspacePath;
-        return DIR_SUCCESS;
-    }
-
-    if (mkdir(defaultWorkspacePath.c_str(), S_IRWXU) != 0) {
+    if (!filesys::exists(defaultWorkspacePath) && mkdir(defaultWorkspacePath.c_str(), S_IRWXU) != 0) {
         std::cout << "Nie mozna stowrzyc katalogu\n";
         return DIR_CANNOT_CREATE;
     }
 
-    std::cout << "Utworzono folder roboczy: " << defaultWorkspacePath << "\n";
+    std::cout << "Folder roboczy: " << defaultWorkspacePath << "\n";
     workspaceUpperDirPath = defaultWorkspacePath;
 
-    return DIR_CANNOT_CREATE;
+    std::ofstream conf(defaultWorkspacePath + configFileName);
+
+    conf.close();
+
+    return DIR_SUCCESS;
 }
 
 std::vector<std::string> LocalSystemHandler::getPreviousState() {
 
-    std::string fullConfigFilePath = workspaceUpperDirPath + workspaceDirName + configFileName;
+    std::string fullConfigFilePath = workspaceUpperDirPath + configFileName;
     if(!isFsFilePathCorrect(fullConfigFilePath)) {
         throw std::runtime_error("Cannot read config file");
     }
