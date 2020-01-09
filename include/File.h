@@ -37,8 +37,7 @@ public:
     /// Getter dla nazwy
     const std::string getName() const;
 
-    /// Getter dla wielkosci pliku
-    size_t getSize() const;
+    size_t getSize();
 
     /**
      * Operator porównania.

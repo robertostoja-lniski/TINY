@@ -7,26 +7,17 @@
 
 
 #include <string>
-#include <vector>
-#include "FileBroadcastStruct.h"
-
-
-/// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
-enum UDPCommunicateType {
-    UDP_BROADCAST = 0,
-    UDP_REVOKE = 1,
-};
+#include "P2PNode.h"
 
 struct Communicate {
     UDPCommunicateType type;
     char userName[64];
     std::vector<FileBroadcastStruct> files;
-    FileBroadcastStruct revokedFile;
+    File revokedFile;
 
     explicit Communicate(std::string userName_, UDPCommunicateType type_ = UDP_BROADCAST);
-    Communicate(UDPCommunicateType type_);
-    Communicate();
-    Communicate(FileBroadcastStruct revokedFile_, std::string userName);
+    Communicate(UDPCommunicateType type_ = UDP_BROADCAST);
+    explicit Communicate(File revokedFile_);
 };
 
 

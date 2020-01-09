@@ -11,18 +11,10 @@ Communicate::Communicate(std::string userName_, UDPCommunicateType type_) {
 
 Communicate::Communicate(UDPCommunicateType type_) {
     type = type_;
-
 }
 
-Communicate::Communicate(FileBroadcastStruct revokedFile_, std::string userName_) {
+Communicate::Communicate(File revokedFile_) {
     revokedFile = revokedFile_;
     type = UDP_REVOKE;
-    strncpy(userName, userName_.c_str(), 63);
-
-}
-
-Communicate::Communicate() {
-    type = UDP_BROADCAST;
-    files.reserve(256);
 }
 
