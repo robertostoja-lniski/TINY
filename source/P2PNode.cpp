@@ -64,7 +64,7 @@ ActionResult P2PNode::removeFile(std::string revokeFileName) {
         return ACTION_FAILURE;
     }
 
-    File tmp(revokeFileName, userName);
+    File tmp(revokeFileName, handler.getUserName());
 
     if (localFiles.removeFile(tmp) != SUCCESS) {
         return ACTION_FAILURE;
@@ -121,7 +121,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
             auto communicates = localFiles.getBroadcastCommunicates();
             for (auto c: communicates) {
 
-                std::string str = (char) UDP_BROADCAST + userName + '\n' + std::to_string(c.first) + c.second;
+                std::string str = (char) UDP_BROADCAST + handler.getUserName() + '\n' + std::to_string(c.first) + c.second;
                 // jeżeli jest niezerowa liczba plików, to wysyłaj
                 if (c.first > 0) {
                     while (send(broadcast.socketFd, str.c_str(), (int) str.length(), 0) < (int) str.length()) {
@@ -241,15 +241,16 @@ void P2PNode::handleDownloadRequests() {
         std::cout << request->fileName << " " << request->bytes << " " << request->offset << std::endl;
 
         // TODO moze local system handler bedzie ustawial prefix do workspace jako pole Node'a
-        std::string path = "/home/" + userName + "/.P2Pworkspace/" + request->fileName;
-        std::cout << path << std::endl;
-
-        int fileFD = open(path.c_str(), 0);
-        if (fileFD < 0) {
+        int fileFD;
+        try {
+            fileFD = handler.openFileFromWorkSpace(request->fileName);
+        }
+        catch(...){
             printf("Żądano pliku, który nie istnieje.\n");
             close(clientFD);
             continue;
         }
+
 
         std::cout << "Wysylam plik " << request->fileName << "\n";
         std::thread t1(&P2PNode::sendFile, this, fileFD, clientFD, request->offset, request->bytes);
@@ -285,12 +286,13 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
         throw std::runtime_error("connection with the server failed...\n");
     }
 
-    std::cout << sizeof(request);
+    // std::cout << sizeof(request);
     if(write(sockfd, &request, sizeof(request))  < sizeof(request)){
         throw std::runtime_error("write failed\n");
     }
 
-    fd = handler.createAndOpenFile(request.fileName)
+    // std::cout << request.fileName << "\n";
+    int fd = handler.createAndOpenFileInWorkspace(request.fileName);
 
     if(lseek(fd, request.offset, SEEK_SET) < request.offset){
         throw std::runtime_error("lseek failed\n");
@@ -300,6 +302,7 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
     unsigned long long bytesReceived = 0;
     while (bytesReceived < request.bytes) {
         ssize_t bytesToRead = std::min(request.bytes - bytesReceived, (unsigned long long)4096 * 1024);
+        // tutaj jest mały problem, poniewaz jezeli nadawca nic nie wysyla (blad lub znika z sieci) to czekamy bez konca
         ssize_t bytesRead = read(sockfd, buff, bytesToRead);
         if (bytesRead < 0) {
             throw std::runtime_error("read failed\n");
