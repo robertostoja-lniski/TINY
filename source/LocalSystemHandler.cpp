@@ -7,6 +7,7 @@ LocalSystemHandler::LocalSystemHandler() {}
 
 std::string LocalSystemHandler::getUserName() {
     char linuxName[MAX_USERNAME_LEN];
+    memset(linuxName, 0x00, MAX_USERNAME_LEN);
 
     if (getlogin_r(linuxName, MAX_USERNAME_LEN)) {
         throw std::runtime_error("nie mozna pobrac nazwy uzytkownika unix");
@@ -19,7 +20,7 @@ std::string LocalSystemHandler::getUserName() {
  * https://thispointer.com/c-check-if-given-path-is-a-file-or-directory-using-boost-c17-filesystem-library/
  */
 
-std::string LocalSystemHandler::getLastTokenOf(std::string filepath) {
+std::string LocalSystemHandler::getLastTokenOf(const std::string filepath) {
     std::string filename = filepath;
     const size_t cut_index = filepath.find_last_of("\\/");
     if (std::string::npos != cut_index) {
@@ -59,7 +60,7 @@ bool LocalSystemHandler::isFsFilePathCorrect(std::string filepath) {
 
 bool LocalSystemHandler::isNetworkFilePathCorrect(std::string filepath) {
 
-    std::string fullPathToFile = workspaceAbsoluteDirPath + workspaceDirName + filepath;
+    std::string fullPathToFile = workspaceAbsoluteDirPath + filepath;
     if (!filesys::exists(fullPathToFile)) {
         std::cout << "Nieistniejaca sciezka\n";
         return false;
@@ -81,11 +82,7 @@ FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepat
     // znajdz nazwe pliku do utworzenia sciezki
     // na poczatku filename i filepath to to samo
     // filename zostanie przyciety
-    std::string filename = filepath;
-    const size_t cut_index = filepath.find_last_of("\\/");
-    if (std::string::npos != cut_index) {
-        filename = filename.erase(0, cut_index + 1);
-    }
+    std::string filename = getLastTokenOf(filepath);
 
     std::string linkPath = workspaceAbsoluteDirPath + filename;
     std::string test = linkPath + "a";
@@ -135,9 +132,10 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
     // std::cout << "Folder roboczy: " << defaultWorkspacePath << "\n";
     workspaceAbsoluteDirPath = defaultWorkspacePath;
 
-    std::ofstream conf(defaultWorkspacePath + configFileName);
-
-    conf.close();
+    if(!filesys::exists(defaultWorkspacePath + configFileName)){
+        std::ofstream conf(defaultWorkspacePath + configFileName);
+        conf.close();
+    }
 
     return DIR_SUCCESS;
 }
@@ -178,7 +176,7 @@ std::vector<std::string> LocalSystemHandler::getPreviousState() {
 
 FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, ConfigOperation action) {
 
-    std::string fullConfigFilePath = workspaceAbsoluteDirPath + workspaceDirName + configFileName;
+    std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
 
     if(!isFsFilePathCorrect(fullConfigFilePath)){
         return FILE_PATH_CORRUPTED;
