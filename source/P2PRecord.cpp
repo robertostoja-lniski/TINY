@@ -8,6 +8,7 @@ AddFileResult P2PRecord::addFile(File file) {
 
     auto it = fileSet.find(file);
     if (it != fileSet.end()) {
+        mutex.unlock_shared();
         return ADD_ALREADY_EXISTS;
     }
 
@@ -25,9 +26,11 @@ void P2PRecord::print() {
     mutex.lock_shared();
     if (fileSet.empty()) {
         std::cout << "Nie posiadasz plikow w systemie\n";
+        mutex.lock_shared();
+        return;
     }
-    for (auto item : fileSet) {
 
+    for (auto item : fileSet) {
         std::cout << item.getName() << " ( owner: " << item.getOwner() << " )\n";
     }
     mutex.unlock_shared();
@@ -40,6 +43,7 @@ RecordOperationResult P2PRecord::removeFile(File file) {
     auto pos = fileSet.find(file);
 
     if (pos == fileSet.end()) {
+        mutex.lock_shared();
         return FILE_NOT_FOUND;
     }
 
