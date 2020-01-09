@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sstream>
+#include <fstream>
 
 
 /// @namespace operacje na plikach.
