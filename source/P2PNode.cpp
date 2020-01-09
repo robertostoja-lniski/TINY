@@ -16,7 +16,6 @@
 
 #include <LocalSystemHandler.h>
 #include <algorithm>
-zaimplementowane żądania i odbior fragmentu pliku
 
 P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), handler(handler) {
 
