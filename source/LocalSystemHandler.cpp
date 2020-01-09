@@ -135,9 +135,10 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
     // std::cout << "Folder roboczy: " << defaultWorkspacePath << "\n";
     workspaceAbsoluteDirPath = defaultWorkspacePath;
 
-    std::ofstream conf(defaultWorkspacePath + configFileName);
-
-    conf.close();
+    if(!filesys::exists(defaultWorkspacePath + configFileName)){
+        std::ofstream conf(defaultWorkspacePath + configFileName);
+        conf.close();
+    }
 
     return DIR_SUCCESS;
 }
@@ -178,7 +179,7 @@ std::vector<std::string> LocalSystemHandler::getPreviousState() {
 
 FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, ConfigOperation action) {
 
-    std::string fullConfigFilePath = workspaceAbsoluteDirPath + workspaceDirName + configFileName;
+    std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
 
     if(!isFsFilePathCorrect(fullConfigFilePath)){
         return FILE_PATH_CORRUPTED;
