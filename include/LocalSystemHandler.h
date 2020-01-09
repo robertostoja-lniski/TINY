@@ -89,7 +89,7 @@ public:
     std::vector<std::string> getPreviousState();
 
     //// zwraca ostatni czlon sciezki w systemie plikow
-    std::string getLastTokenOf(std::string);
+    std::string getLastTokenOf(const std::string);
 
     //// zwraca nazwe uzytkownika w FS
     std::string getUserName();
