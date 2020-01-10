@@ -253,3 +253,8 @@ int LocalSystemHandler::openFileFromWorkSpace(std::string name) {
     return fileFD;
 }
 
+std::size_t LocalSystemHandler::getFileSize(std::string fileName) {
+    size_t size = filesys::file_size(workspaceAbsoluteDirPath + fileName);
+    return size;
+}
+

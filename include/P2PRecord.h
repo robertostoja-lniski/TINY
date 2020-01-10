@@ -13,6 +13,7 @@
 #include <shared_mutex>
 #include <vector>
 #include "File.h"
+#include <queue>
 
 /// @enum Rezultat operacji na rekordzie
 enum RecordOperationResult {
@@ -61,7 +62,7 @@ public:
      * @return wektor par {ilość plików, treść (pliki)}
      * @synchronized
      */
-    std::vector<std::pair<u_short, std::string>> getBroadcastCommunicates();
+    std::vector<File> getFiles();
 };
 
 

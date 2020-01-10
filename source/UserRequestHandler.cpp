@@ -71,6 +71,7 @@ void UserRequestHandler::waitForRequest() {
         if (requestType == NOT_A_REQUEST) {
             printUnknownCommandMsg();
             printHelp();
+            std::cin.ignore(INT64_MAX);
             continue;
         }
 

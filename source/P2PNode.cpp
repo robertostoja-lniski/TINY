@@ -23,12 +23,13 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), h
     std::vector<std::string> filesNamesToReUpload = handler.getPreviousState();
 
     for(auto fileName : filesNamesToReUpload) {
-        File restoredFile(fileName, handler.getUserName());
+        size_t fileSize = handler.getFileSize(fileName);
+        File restoredFile(fileName, handler.getUserName(), fileSize);
         localFiles.addFile(restoredFile);
     }
 
-//    startBroadcastingFiles();
-//    startReceivingBroadcastingFiles();
+    startBroadcastingFiles();
+    startReceivingBroadcastingFiles();
 }
 
 ActionResult P2PNode::uploadFile(std::string uploadFileName) {
@@ -38,7 +39,8 @@ ActionResult P2PNode::uploadFile(std::string uploadFileName) {
     }
 
     std::string systemFileName = handler.getLastTokenOf(uploadFileName);
-    File file(systemFileName, handler.getUserName());
+    size_t fileSize = handler.getFileSize(uploadFileName);
+    File file(systemFileName, handler.getUserName(), fileSize);
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
     AddFileResult ret = localFiles.addFile(file);
@@ -58,13 +60,13 @@ ActionResult P2PNode::showLocalFiles() {
     localFiles.print();
 }
 
-ActionResult P2PNode::removeFile(std::string revokeFileName) {
+ActionResult P2PNode::removeFile(std::string fileName) {
 
-    if(!handler.isNetworkFilePathCorrect(revokeFileName)) {
+    if(!handler.isNetworkFilePathCorrect(fileName)) {
         return ACTION_FAILURE;
     }
-
-    File tmp(revokeFileName, handler.getUserName());
+    size_t fileSize = handler.getFileSize(fileName);
+    File tmp(fileName, handler.getUserName(), fileSize);
 
     if (localFiles.removeFile(tmp) != SUCCESS) {
         return ACTION_FAILURE;
@@ -73,14 +75,13 @@ ActionResult P2PNode::removeFile(std::string revokeFileName) {
     globalFiles.revoke(tmp);
     globalFiles.addToFilesRevokedByMe(tmp);
 
-    //// TODO
-//    if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
-//        uploadFile(revokeFileName);
-//        return ACTION_FAILURE;
-//    }
+    if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
+        uploadFile(fileName);
+        return ACTION_FAILURE;
+    }
 
-    if(handler.removeFileFromLocalSystem(revokeFileName) != FILE_SUCCESS) {
-        uploadFile(revokeFileName);
+    if(handler.removeFileFromLocalSystem(fileName) != FILE_SUCCESS) {
+        uploadFile(fileName);
         return ACTION_FAILURE;
     }
 
@@ -118,30 +119,77 @@ ActionResult P2PNode::startBroadcastingFiles() {
             }
             broadcast.exitMutex.unlock();
 
-            auto communicates = localFiles.getBroadcastCommunicates();
-            for (auto c: communicates) {
+            std::vector<File> communicates = localFiles.getFiles();
+            size_t filesLeftToBroadcast = communicates.size();
+            size_t fileId = 0;
+            std::cout << "Broadcast " << filesLeftToBroadcast << " plikow." << std::endl;
 
-                std::string str = (char) UDP_BROADCAST + handler.getUserName() + '\n' + std::to_string(c.first) + c.second;
-                // jeżeli jest niezerowa liczba plików, to wysyłaj
-                if (c.first > 0) {
-                    while (send(broadcast.socketFd, str.c_str(), (int) str.length(), 0) < (int) str.length()) {
-                        if (++failuresCount > 10) {
-                            while (prepareForBroadcast(true) != ACTION_SUCCESS) {
-                                // Sprawdzenie warunku czy wychodzimy z petli
-                                broadcast.exitMutex.lock();
-                                if (broadcast.exit) {
-                                    broadcast.exitMutex.unlock();
-                                    break;
-                                }
+            while(filesLeftToBroadcast > 0) {
+
+                size_t filesToSendNow = std::min(filesLeftToBroadcast, (size_t)FILES_IN_ONE_DATAGRAM_LIMIT);
+
+                // wiadomosc ma postac
+                // [bajt - 0, lub 1 - typ wiadomosci][ 4 bajty - rozmiar ][ 64 bajty nazwa wysylajacego ][ 136 bajtow ][ 136 bajtow ][ 136 bajtow ] ...
+                uint8_t* broadcastMsg = (uint8_t* )malloc(filesToSendNow * sizeof(BroadcastStruct) + sizeof(char) + sizeof(size_t) + 64 * sizeof(char));
+                if(broadcastMsg == nullptr){
+                    broadcast.exitMutex.lock();
+                    if (broadcast.exit) {
+                        broadcast.exitMutex.unlock();
+                        break;
+                    }
+                    broadcast.exitMutex.unlock();
+                }
+                // dla rozglaszania
+                *broadcastMsg = '0';
+                std::cout << "typ: " << *broadcastMsg << "|";
+                // ilosc plikow
+                size_t* sizeInfoAddress = (size_t *)(broadcastMsg + sizeof(char));
+                *sizeInfoAddress = filesToSendNow;
+                std::cout << "ilosc: " << *sizeInfoAddress << "|";
+                // dodanie 1 do typu size_t doda 4 bajty ( taki rozmiar ma size_t )
+                char* senderInfoAddress = (char* )(sizeInfoAddress + 1);
+
+                // copies sender name
+                strncpy(senderInfoAddress, handler.getUserName().c_str(), MAX_USERNAME_LEN - 1);
+                std::cout << "wysylajacy: " << std::string(senderInfoAddress) << "|";
+
+                BroadcastStruct* broadcastStructAddress = (BroadcastStruct* )((uint8_t* )senderInfoAddress + sizeof(size_t) + 64*sizeof(char));
+                for(int i = 0; i < filesToSendNow; i++){
+
+                    BroadcastStruct msg {};
+                    strncpy(msg.name, communicates[fileId].getName().c_str(), B_FILENAME_LEN - 1);
+                    strncpy(msg.owner, communicates[fileId].getOwner().c_str(), B_OWNER_NAME_LEN - 1);
+                    // tymczasowo
+                    msg.size = 0;
+                    fileId ++;
+                    std::cout << "wielkosc: " << msg.size << "| nazwa: "  << msg.name << "| wlasciciel: " << msg.owner << "||";
+
+                    *broadcastStructAddress = msg;
+                }
+                std::cout << "\n";
+
+                size_t fullBroadcastMsgSize = sizeof(broadcastMsg);
+                while (send(broadcast.socketFd, broadcastMsg, fullBroadcastMsgSize, 0) < fullBroadcastMsgSize) {
+                    if (++failuresCount > BROADCAST_FAILURE_LIMIT) {
+                        while (prepareForBroadcast(true) != ACTION_SUCCESS) {
+                            // Sprawdzenie warunku czy wychodzimy z petli
+                            broadcast.exitMutex.lock();
+                            if (broadcast.exit) {
                                 broadcast.exitMutex.unlock();
-
-                                std::this_thread::sleep_for(std::chrono::seconds(broadcast.restartConnectionInterval));
+                                break;
                             }
-                            failuresCount = 0;
+                            broadcast.exitMutex.unlock();
+
+                            std::this_thread::sleep_for(std::chrono::seconds(broadcast.restartConnectionInterval));
                         }
+                        failuresCount = 0;
                     }
                 }
+
+                free (broadcastMsg);
+                filesLeftToBroadcast -= filesToSendNow;
             }
+            sleep(BROADCAST_PERIOD);
         }
     });
 
@@ -359,9 +407,28 @@ ActionResult P2PNode::sendRevokeCommunicate(const File file) {
         return actionResult;
     }
 
-    std::string communicate = (char) UDP_REVOKE + file.getOwner() + '\n' + file.getName() + '\n';
+    uint8_t* broadcastMsg = (uint8_t* )malloc( sizeof(BroadcastStruct)
+            + sizeof(char) + sizeof(size_t) + 64 * sizeof(char));
+    // dla revoke
+    *broadcastMsg = '1';
+    // ilosc plikow wynosi 1
+    size_t* sizeInfoAddress = (size_t *)(broadcastMsg + sizeof(char));
+    *sizeInfoAddress = 1;
+    char* senderInfoAddress = (char* )(sizeInfoAddress + 1);
 
-    if (send(broadcast.socketFd, communicate.c_str(), (int) communicate.length(), 0) < (int) communicate.length()) {
+    // copies sender name
+    strncpy(senderInfoAddress, handler.getUserName().c_str(), MAX_USERNAME_LEN - 1);
+
+    BroadcastStruct* pRevokedFileAddress = (BroadcastStruct* )((uint8_t* )senderInfoAddress + 64 * sizeof(char));
+    BroadcastStruct msg {};
+    strncpy(msg.name, file.getName().c_str(), B_FILENAME_LEN - 1);
+    strncpy(msg.owner, file.getOwner().c_str(), B_OWNER_NAME_LEN - 1);
+    // tymczasowo
+    msg.size = 0;
+    *pRevokedFileAddress = msg;
+
+    size_t msgSize = sizeof(broadcastMsg);
+    if (send(broadcast.socketFd, broadcastMsg, msgSize, 0) < msgSize) {
         return ACTION_FAILURE;
     }
     return ACTION_SUCCESS;
@@ -376,9 +443,13 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
     }
 
     broadcast.recvThread = std::thread([this]() {
-        char buf[16 * 1024];
+        // 256 - maks plikow w 1 wiadomosci
+        // 132 - wielkosc jednej wiadomosci
+        // 5 - jeden bajt na typ, 4 na ilosc danych
+        // 64 na wysylajacego
+        char buf[256 * sizeof(BroadcastStruct) + 5 + 64];
+        unsigned long long bytesReceived = 0;
         while (true) {
-            // Sprawdzenie warunku czy wychodzimy z petli
             broadcast.exitMutex.lock();
             if (broadcast.exit) {
                 broadcast.exitMutex.unlock();
@@ -389,31 +460,38 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             if (recv(broadcast.socketFd, buf, sizeof(buf), 0) < 0) {
                 continue;
             }
-            std::string str(buf);
-            std::stringstream ss(str);
-            char communicateType;
-            ss >> communicateType;
-            if (communicateType == UDP_BROADCAST) {
-                std::string sender, fileName, fileOwner;
-                short number;
-                ss >> sender >> number;
-                for (int i = 0; i < number; ++i) {
-                    ss >> fileName >> fileOwner;
-                    File tmp(std::move(fileName), std::move(fileOwner));
-                    if (globalFiles.add(std::move(sender), std::move(tmp)) == ADD_GLOBAL_REVOKED) {
+
+            // typ komunikatu
+            char type = buf[0];
+            uint8_t* pBuf = (uint8_t* )buf;
+            // miejsce rozmiaru
+            size_t* pMsgSize = (size_t* )((uint8_t* )buf + sizeof(char));
+            size_t msgNum = *pMsgSize;
+            // sender
+            char senderName[MAX_USERNAME_LEN];
+            size_t* pSender = pMsgSize + 1;
+            strncpy(senderName, (char* )pSender, MAX_USERNAME_LEN - 1);
+
+            BroadcastStruct* currentStruct = (BroadcastStruct* )((uint8_t* )pSender + 64 * sizeof(char));
+            for(int i = 0; i < msgNum; i++) {
+                File tmp(std::move(std::string(currentStruct->name)),
+                        std::move(std::string(currentStruct->owner)),
+                        currentStruct->size);
+                currentStruct++;
+
+                if(type == '0') {
+                    if (globalFiles.add(std::move(std::string(senderName)), std::move(tmp)) == ADD_GLOBAL_REVOKED) {
                         sendRevokeCommunicate(
-                                std::move(tmp)); // dlaczego tutaj uzywamy zmiennej ktora zostala przeniesiona?
+                                std::move(tmp)); 
                     }
+                    // warto sprawdzic co dla wartosci innych niz '0' i '1'
+                } else {
+                    globalFiles.revoke(tmp);
+                    localFiles.removeFile(std::move(tmp));
+                    updateLocalFiles();
                 }
-            } else {
-                //revoke
-                std::string name, owner;
-                ss >> name >> owner;
-                File tmp(name, owner);
-                globalFiles.revoke(std::move(tmp));
-                localFiles.removeFile(std::move(tmp)); // dlaczego tutaj uzywamy zmiennej ktora zostala przeniesiona?
-                updateLocalFiles();
             }
+
         }
     });
 
