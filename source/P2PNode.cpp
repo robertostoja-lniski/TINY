@@ -27,8 +27,8 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), h
         localFiles.addFile(restoredFile);
     }
 
-//    startBroadcastingFiles();
-//    startReceivingBroadcastingFiles();
+    startBroadcastingFiles();
+    startReceivingBroadcastingFiles();
 }
 
 ActionResult P2PNode::uploadFile(std::string uploadFileName) {
@@ -56,6 +56,7 @@ ActionResult P2PNode::uploadFile(std::string uploadFileName) {
 
 ActionResult P2PNode::showLocalFiles() {
     localFiles.print();
+    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::removeFile(std::string revokeFileName) {
@@ -73,7 +74,6 @@ ActionResult P2PNode::removeFile(std::string revokeFileName) {
     globalFiles.revoke(tmp);
     globalFiles.addToFilesRevokedByMe(tmp);
 
-    //// TODO
 //    if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
 //        uploadFile(revokeFileName);
 //        return ACTION_FAILURE;
@@ -121,7 +121,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
             auto communicates = localFiles.getBroadcastCommunicates();
 
             for (auto c: *communicates) {
-                if (c.files.size() > 0) {
+                if (!c.files.empty()) {
                     int structSize = (int) sizeof(c);
                     while (send(broadcast.socketFd, &c, structSize, 0) < structSize ) {
                         if (++failuresCount > 10) {
@@ -350,7 +350,7 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::sendRevokeCommunicate(const File file) {
+ActionResult P2PNode::sendRevokeCommunicate(File file) {
     // Przygotuj się na broadcast
     ActionResult actionResult;
     if ((actionResult = prepareForBroadcast()) != ACTION_SUCCESS) {
@@ -358,9 +358,9 @@ ActionResult P2PNode::sendRevokeCommunicate(const File file) {
         return actionResult;
     }
 
-    std::string communicate = (char) UDP_REVOKE + file.getOwner() + '\n' + file.getName() + '\n';
+    Communicate communicate(FileBroadcastStruct(file.getName(), file.getOwner(), file.getSize()), handler.getUserName());
 
-    if (send(broadcast.socketFd, communicate.c_str(), (int) communicate.length(), 0) < (int) communicate.length()) {
+    if (send(broadcast.socketFd, (void *) &communicate, (int) sizeof(communicate), 0) < (int) sizeof(communicate)) {
         return ACTION_FAILURE;
     }
     return ACTION_SUCCESS;
@@ -384,25 +384,22 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             }
             broadcast.exitMutex.unlock();
 
+
             Communicate communicate;
-            if (recv(broadcast.socketFd, &communicate, 1024 * 64, 0) < 0) {
+            if (recv(broadcast.socketFd, (void *) &communicate, 1024 * 64, 0) < 0) {
                 continue;
             }
             if (communicate.type == UDP_BROADCAST) {
                 for (auto file: communicate.files) {
-                    if (globalFiles.add(std::move(communicate.userName), File(file)) == ADD_GLOBAL_REVOKED) {
+                    if (globalFiles.add(communicate.userName, File(file)) == ADD_GLOBAL_REVOKED) {
+
                         sendRevokeCommunicate(File(file));
                     }
                 }
             }
             else {
-                //revoke
-                std::string name, owner;
-                ss >> name >> owner;
-                File tmp(name, owner);
-                globalFiles.revoke(std::move(tmp));
-                localFiles.removeFile(std::move(tmp)); // dlaczego tutaj uzywamy zmiennej ktora zostala przeniesiona?
-                updateLocalFiles();
+                //revoke communicate type
+                removeFile(communicate.revokedFile.name);
             }
         }
     });

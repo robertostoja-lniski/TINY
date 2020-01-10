@@ -10,6 +10,7 @@ struct FileBroadcastStruct {
     size_t size;
 
     FileBroadcastStruct(std::string name_, std::string owner_, size_t size);
+    FileBroadcastStruct();
 };
 
 
