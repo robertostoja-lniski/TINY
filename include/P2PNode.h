@@ -8,6 +8,7 @@
 #include "P2PFiles.h"
 #include "LocalSystemHandler.h"
 #include <future>
+#include "Communicate.h"
 
 #define MAX_USERNAME_LEN 40
 #define MAX_FILENAME_LEN 500
@@ -31,13 +32,6 @@ struct fileRequest {
     char fileName[MAX_FILENAME_LEN];
     unsigned long long offset;
     unsigned long long bytes;
-};
-
-/// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
-enum UDPCommunicateType {
-    UDP_BROADCAST = 0,
-    UDP_REVOKE = 1,
-
 };
 
 enum SHOW_GLOBAL_FILE_TYPE {
@@ -121,7 +115,7 @@ public:
     ActionResult showLocalFiles();
 
     /// Wysyła komunikat unieważnienia pliku
-    ActionResult sendRevokeCommunicate(const File);
+    ActionResult sendRevokeCommunicate(File);
 
     ActionResult startHandlingDownloadRequests();
 

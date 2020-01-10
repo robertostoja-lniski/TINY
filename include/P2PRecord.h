@@ -9,7 +9,7 @@
 #include <string>
 #include <set>
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 #include <shared_mutex>
 #include <vector>
 #include "File.h"

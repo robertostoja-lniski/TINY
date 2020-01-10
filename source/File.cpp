@@ -32,3 +32,7 @@ File::File(FileBroadcastStruct &fileBroadcastStruct) {
     owner = fileBroadcastStruct.owner;
     size = fileBroadcastStruct.size;
 }
+
+size_t File::getSize() const {
+    return size;
+}

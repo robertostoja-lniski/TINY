@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include "LocalSystemHandler.h"
 #include "P2PNode.h"
+#include <unistd.h>
 
 
 LocalSystemHandler::LocalSystemHandler() {}
@@ -121,9 +122,13 @@ FileOperationResult LocalSystemHandler::removeFileFromLocalSystem(std::string fi
 }
 
 DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
-
-    std::string defaultWorkspacePath = "/home/" + getUserName() + "/" + workspaceDirName;
-
+#if __APPLE__
+    std::string defaultWorkspacePath = "/Users/";
+#else
+    std::string defaultWorkspacePath = "/home/";
+#endif
+    defaultWorkspacePath += getUserName() + "/" + workspaceDirName;
+    std::cout << defaultWorkspacePath << std::endl;
     if (!filesys::exists(defaultWorkspacePath) && mkdir(defaultWorkspacePath.c_str(), S_IRWXU) != 0) {
         std::cout << "Nie mozna stowrzyc katalogu\n";
         return DIR_CANNOT_CREATE;
