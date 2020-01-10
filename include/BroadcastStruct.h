@@ -9,7 +9,7 @@
 
 #define B_FILENAME_LEN 64
 #define B_OWNER_NAME_LEN 64
-#define BROADCAST_PERIOD 10
+#define BROADCAST_PERIOD 20
 
 struct BroadcastStruct{
 

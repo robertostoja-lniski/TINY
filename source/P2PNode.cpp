@@ -23,7 +23,8 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), h
     std::vector<std::string> filesNamesToReUpload = handler.getPreviousState();
 
     for(auto fileName : filesNamesToReUpload) {
-        File restoredFile(fileName, handler.getUserName());
+        size_t fileSize = handler.getFileSize(fileName);
+        File restoredFile(fileName, handler.getUserName(), fileSize);
         localFiles.addFile(restoredFile);
     }
 
@@ -38,7 +39,8 @@ ActionResult P2PNode::uploadFile(std::string uploadFileName) {
     }
 
     std::string systemFileName = handler.getLastTokenOf(uploadFileName);
-    File file(systemFileName, handler.getUserName());
+    size_t fileSize = handler.getFileSize(uploadFileName);
+    File file(systemFileName, handler.getUserName(), fileSize);
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
     AddFileResult ret = localFiles.addFile(file);
@@ -58,13 +60,13 @@ ActionResult P2PNode::showLocalFiles() {
     localFiles.print();
 }
 
-ActionResult P2PNode::removeFile(std::string revokeFileName) {
+ActionResult P2PNode::removeFile(std::string fileName) {
 
-    if(!handler.isNetworkFilePathCorrect(revokeFileName)) {
+    if(!handler.isNetworkFilePathCorrect(fileName)) {
         return ACTION_FAILURE;
     }
-
-    File tmp(revokeFileName, handler.getUserName());
+    size_t fileSize = handler.getFileSize(fileName);
+    File tmp(fileName, handler.getUserName(), fileSize);
 
     if (localFiles.removeFile(tmp) != SUCCESS) {
         return ACTION_FAILURE;
@@ -74,12 +76,12 @@ ActionResult P2PNode::removeFile(std::string revokeFileName) {
     globalFiles.addToFilesRevokedByMe(tmp);
 
     if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
-        uploadFile(revokeFileName);
+        uploadFile(fileName);
         return ACTION_FAILURE;
     }
 
-    if(handler.removeFileFromLocalSystem(revokeFileName) != FILE_SUCCESS) {
-        uploadFile(revokeFileName);
+    if(handler.removeFileFromLocalSystem(fileName) != FILE_SUCCESS) {
+        uploadFile(fileName);
         return ACTION_FAILURE;
     }
 
@@ -472,7 +474,9 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
 
             BroadcastStruct* currentStruct = (BroadcastStruct* )((uint8_t* )pSender + 64 * sizeof(char));
             for(int i = 0; i < msgNum; i++) {
-                File tmp(std::move(std::string(currentStruct->name)), std::move(std::string(currentStruct->owner)));
+                File tmp(std::move(std::string(currentStruct->name)),
+                        std::move(std::string(currentStruct->owner)),
+                        currentStruct->size);
                 currentStruct++;
 
                 if(type == '0') {
