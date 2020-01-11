@@ -8,14 +8,11 @@
 #include "P2PFiles.h"
 #include "LocalSystemHandler.h"
 #include <future>
-#include "BroadcastStruct.h"
-#include "cmath"
 
-#define MAX_USERNAME_LEN 64
+#define MAX_USERNAME_LEN 40
 #define MAX_FILENAME_LEN 500
 #define MAX_TCP_CONNECTIONS 5
-#define FILES_IN_ONE_DATAGRAM_LIMIT 256
-#define BROADCAST_FAILURE_LIMIT 10
+
 /**
  * @enum
  * Rezultat akcji wykonywanej przez P2PNode
