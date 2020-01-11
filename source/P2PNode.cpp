@@ -88,8 +88,31 @@ ActionResult P2PNode::removeFile(std::string fileName) {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::downloadFile(const std::string &) {
-    return ACTION_NOT_HANDLED;
+ActionResult P2PNode::downloadFile(const std::string &fileName) {
+    size_t fileSize = handler.getFileSize(fileName);
+    size_t toDownloadFromEach;
+    std::vector<std::string> possessorsIps = globalFiles.getFilePossessors(fileName);
+    if (fileSize){
+        toDownloadFromEach = fileSize/possessorsIps.size();
+        size_t rest = fileSize%possessorsIps.size();
+        fileRequest request {};
+        strcpy(request.fileName, fileName.c_str());
+        request.bytes = toDownloadFromEach;
+        std::vector <std::thread> threads;
+        for (auto i = 0; i < possessorsIps.size(); i++){
+            request.offset = i * toDownloadFromEach;
+            //ktos musi doslac fragment, ktory pozostanie z dzielenia.
+            request.bytes += (i == possessorsIps.size() -1 ) ? rest : 0;
+            std::thread t(&P2PNode::requestAndDownloadFileFragment, this, request, possessorsIps[i]);
+            threads.push_back(std::move(t));
+        }
+        for (auto &t: threads) {
+            t.join();
+        }
+    }
+    else{
+        throw std::runtime_error("Nikt nie ma wskazanego pliku \n");
+    }
 }
 
 ActionResult P2PNode::updateLocalFiles(void) {

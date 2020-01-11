@@ -38,3 +38,15 @@ void P2PFiles::addToFilesRevokedByMe(File file) {
     filesRevokedByMe.insert(file);
 }
 
+std::vector<std::string> P2PFiles::getFilePossessors(std::string fileName) {
+    std::vector <std::string> possessorsIPs;
+    for (auto & [possessor, possessorsFiles] : files){
+        for (auto file : possessorsFiles.getFiles()){
+            if (fileName == file.getName()){
+                possessorsIPs.push_back(possessor);
+            }
+        }
+    }
+    return possessorsIPs;
+}
+

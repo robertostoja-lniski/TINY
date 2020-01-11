@@ -53,6 +53,8 @@ public:
     /// Pokaż wszystkie pliki
     /// @synchronized
     void showFiles();
+
+    std::vector<std::string> getFilePossessors(std::string fileName);
 };
 
 
