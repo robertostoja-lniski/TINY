@@ -2,14 +2,11 @@
 #include <utility>
 #include <thread>
 #include "P2PNode.h"
-#include <netinet/in.h>
-#include <cstdlib>
-#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <cstdio>
 #include <fcntl.h>
 #include <vector>
-#include <arpa/inet.h>
 #include <sstream>
 #include <cstring>
 #include <stdexcept>
@@ -103,7 +100,7 @@ ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
 ActionResult P2PNode::startBroadcastingFiles() {
     // Przygotuj się na broadcast
     ActionResult actionResult;
-    if ((actionResult = prepareForBroadcast()) != ACTION_SUCCESS) {
+    if ((actionResult = prepareForBroadcastSending()) != ACTION_SUCCESS) {
         // jeśli niepowodzenie, zwróć rezultat
         return actionResult;
     }
@@ -129,7 +126,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
                 size_t filesToSendNow = std::min(filesLeftToBroadcast, (size_t)FILES_IN_ONE_DATAGRAM_LIMIT);
 
                 // wiadomosc ma postac
-                // [bajt - 0, lub 1 - typ wiadomosci][ 4 bajty - rozmiar ][ 64 bajty nazwa wysylajacego ][ 136 bajtow ][ 136 bajtow ][ 136 bajtow ] ...
+                // [bajt - 0, lub 1 - typ wiadomosci][ 8 bajtow - rozmiar ][ 64 bajty nazwa wysylajacego ][ 136 bajtow ][ 136 bajtow ][ 136 bajtow ] ...
                 uint8_t* broadcastMsg = (uint8_t* )malloc(filesToSendNow * sizeof(BroadcastStruct) + sizeof(char) + sizeof(size_t) + 64 * sizeof(char));
                 if(broadcastMsg == nullptr){
                     broadcast.exitMutex.lock();
@@ -140,6 +137,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
                     broadcast.exitMutex.unlock();
                 }
                 // dla rozglaszania
+                std::cout << sizeof(size_t) << std::endl;
                 *broadcastMsg = '0';
                 std::cout << "typ: " << *broadcastMsg << "|";
                 // ilosc plikow
@@ -169,9 +167,14 @@ ActionResult P2PNode::startBroadcastingFiles() {
                 std::cout << "\n";
 
                 size_t fullBroadcastMsgSize = sizeof(broadcastMsg);
-                while (send(broadcast.socketFd, broadcastMsg, fullBroadcastMsgSize, 0) < fullBroadcastMsgSize) {
+                const char* sendString = std::string("siema").c_str();
+
+                while (sendto(broadcast.socketFd, broadcastMsg, fullBroadcastMsgSize,
+                        MSG_CONFIRM, (const struct sockaddr *) &broadcast.addrToSend,
+                                sizeof(broadcast.addrToSend)) < fullBroadcastMsgSize) {
+
                     if (++failuresCount > BROADCAST_FAILURE_LIMIT) {
-                        while (prepareForBroadcast(true) != ACTION_SUCCESS) {
+                        while (prepareForBroadcastSending(true) != ACTION_SUCCESS) {
                             // Sprawdzenie warunku czy wychodzimy z petli
                             broadcast.exitMutex.lock();
                             if (broadcast.exit) {
@@ -363,7 +366,7 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
     }
 }
 
-ActionResult P2PNode::prepareForBroadcast(bool restart) {
+ActionResult P2PNode::prepareForBroadcastSending(bool restart) {
     std::unique_lock<std::mutex> lk(broadcast.preparationMutex);
 
     if (restart) {
@@ -371,38 +374,36 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
         broadcast.socketFd = -1;
     }
 
-    int fd = broadcast.socketFd;
-    if (fd >= 0) {
+    int clientFd = broadcast.socketFd;
+    if (clientFd >= 0) {
         return ACTION_SUCCESS;
     }
 
-    // Otwórz gniazdo
-    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        std::cout << "Nie udalo sie otworzyc gniazda. Numer bledu: " << errno << std::endl;
-        return ACTION_FAILURE;
+    // tworzy gniazdo i umozliwia broadcast
+    if ( (clientFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
+        exit(EXIT_FAILURE);
     }
+    int broadcastPermission = 1;
+    if (setsockopt(clientFd, SOL_SOCKET, SO_BROADCAST, (void *) &broadcastPermission,
+                   sizeof(broadcastPermission)) < 0)
+        puts("Broadcast not allowed");
 
-    struct sockaddr_in address;
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    address.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+    struct sockaddr_in addr {};
+    // Filling server information
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+    addr.sin_addr.s_addr = inet_addr(broadcast.broadcastIp);
 
-    // Bind adres do gniazda
-    if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
-        close(fd);
-        std::cout << "Nie udalo sie przypisac adresu do gniazda. Numer bledu: " << errno << std::endl;
-        return ACTION_FAILURE;
-    }
-
-    this->broadcast.socketFd = fd;
-
+    broadcast.addrToSend = addr;
+    broadcast.socketFd = clientFd;
     return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::sendRevokeCommunicate(const File file) {
     // Przygotuj się na broadcast
     ActionResult actionResult;
-    if ((actionResult = prepareForBroadcast()) != ACTION_SUCCESS) {
+    if ((actionResult = prepareForBroadcastSending()) != ACTION_SUCCESS) {
         // jeśli niepowodzenie, zwróć rezultat
         return actionResult;
     }
@@ -428,7 +429,8 @@ ActionResult P2PNode::sendRevokeCommunicate(const File file) {
     *pRevokedFileAddress = msg;
 
     size_t msgSize = sizeof(broadcastMsg);
-    if (send(broadcast.socketFd, broadcastMsg, msgSize, 0) < msgSize) {
+    if (sendto(broadcast.socketFd, broadcastMsg, msgSize, MSG_CONFIRM,
+               (const struct sockaddr *) &broadcast.addrToSend, sizeof(broadcast.addrToSend)) < msgSize) {
         return ACTION_FAILURE;
     }
     return ACTION_SUCCESS;
@@ -437,7 +439,7 @@ ActionResult P2PNode::sendRevokeCommunicate(const File file) {
 ActionResult P2PNode::startReceivingBroadcastingFiles() {
     // Przygotuj się na broadcast
     ActionResult actionResult;
-    if ((actionResult = prepareForBroadcast()) != ACTION_SUCCESS) {
+    if ((actionResult = prepareForBroadcastSending()) != ACTION_SUCCESS) {
         // jeśli niepowodzenie, zwróć rezultat
         return actionResult;
     }
