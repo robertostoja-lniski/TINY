@@ -402,8 +402,8 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             else {
                 //revoke communicate type
                 removeFile(communicate.revokedFile.name);
-                globalFiles.revoke(std::move(tmp));
-                localFiles.removeFile(std::move(tmp)); // dlaczego tutaj uzywamy zmiennej ktora zostala przeniesiona?
+                globalFiles.revoke(File(communicate.revokedFile));
+                localFiles.removeFile(File(communicate.revokedFile));
                 updateLocalFiles();
             }
         }
