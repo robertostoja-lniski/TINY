@@ -23,7 +23,8 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), h
     std::vector<std::string> filesNamesToReUpload = handler.getPreviousState();
 
     for(auto fileName : filesNamesToReUpload) {
-        File restoredFile(fileName, handler.getUserName());
+        size_t fileSize = handler.getFileSize(fileName);
+        File restoredFile(fileName, handler.getUserName(), fileSize);
         localFiles.addFile(restoredFile);
     }
 
@@ -38,7 +39,8 @@ ActionResult P2PNode::uploadFile(std::string uploadFileName) {
     }
 
     std::string systemFileName = handler.getLastTokenOf(uploadFileName);
-    File file(systemFileName, handler.getUserName());
+    size_t fileSize = handler.getFileSize(uploadFileName);
+    File file(systemFileName, handler.getUserName(), fileSize);
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
     AddFileResult ret = localFiles.addFile(file);
@@ -59,13 +61,13 @@ ActionResult P2PNode::showLocalFiles() {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::removeFile(std::string revokeFileName) {
+ActionResult P2PNode::removeFile(std::string fileName) {
 
-    if(!handler.isNetworkFilePathCorrect(revokeFileName)) {
+    if(!handler.isNetworkFilePathCorrect(fileName)) {
         return ACTION_FAILURE;
     }
-
-    File tmp(revokeFileName, handler.getUserName());
+    size_t fileSize = handler.getFileSize(fileName);
+    File tmp(fileName, handler.getUserName(), fileSize);
 
     if (localFiles.removeFile(tmp) != SUCCESS) {
         return ACTION_FAILURE;
@@ -79,8 +81,8 @@ ActionResult P2PNode::removeFile(std::string revokeFileName) {
 //        return ACTION_FAILURE;
 //    }
 
-    if(handler.removeFileFromLocalSystem(revokeFileName) != FILE_SUCCESS) {
-        uploadFile(revokeFileName);
+    if(handler.removeFileFromLocalSystem(fileName) != FILE_SUCCESS) {
+        uploadFile(fileName);
         return ACTION_FAILURE;
     }
 
@@ -400,6 +402,9 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             else {
                 //revoke communicate type
                 removeFile(communicate.revokedFile.name);
+                globalFiles.revoke(std::move(tmp));
+                localFiles.removeFile(std::move(tmp)); // dlaczego tutaj uzywamy zmiennej ktora zostala przeniesiona?
+                updateLocalFiles();
             }
         }
     });

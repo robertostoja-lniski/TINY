@@ -94,6 +94,9 @@ public:
     //// zwraca nazwe uzytkownika w FS
     std::string getUserName();
 
+    //// Zwraca rozmiar pliku
+    std::size_t getFileSize(std::string fileName);
+
     int createAndOpenFileInWorkspace(std::string name);
 
     int openFileFromWorkSpace(std::string name);

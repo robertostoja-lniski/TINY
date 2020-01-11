@@ -86,7 +86,6 @@ FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepat
     std::string filename = getLastTokenOf(filepath);
 
     std::string linkPath = workspaceAbsoluteDirPath + filename;
-    std::string test = linkPath + "a";
     if (link(filepath.c_str(), linkPath.c_str()) != 0) {
         std::cout << "Link sie nie powiodl, taki plik istnieje albo wystapil blad w sciezce\n";
         return FILE_CANNOT_ADD_TO_WORKSPACE;
@@ -99,7 +98,7 @@ FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepat
 
 FileOperationResult LocalSystemHandler::removeFileFromLocalSystem(std::string fileToRemove) {
 
-    std::string fullPathToFile = workspaceAbsoluteDirPath + workspaceDirName + fileToRemove;
+    std::string fullPathToFile = workspaceAbsoluteDirPath + fileToRemove;
 
     if (updateConfig(fileToRemove, CONFIG_REMOVE) != FILE_SUCCESS) {
         std::cout << "Plik nie mogl zostac usuniety z pliku konfiguracyjengo\n";
@@ -208,7 +207,7 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
         std::string fileName;
 
         // tworzy i otwiera plik do zapisu
-        std::string fullTmpConfigFilePath = workspaceAbsoluteDirPath + workspaceDirName + "/.tmp" + configFileName;
+        std::string fullTmpConfigFilePath = workspaceAbsoluteDirPath  + ".tmp" + configFileName;
         configFile.open(fullTmpConfigFilePath, std::ios::out);
 
         while (std::getline(infile, configRecord)) {
@@ -257,5 +256,10 @@ int LocalSystemHandler::openFileFromWorkSpace(std::string name) {
         throw std::runtime_error("file open failed\n");
     }
     return fileFD;
+}
+
+std::size_t LocalSystemHandler::getFileSize(std::string fileName) {
+    size_t size = filesys::file_size(workspaceAbsoluteDirPath + fileName);
+    return size;
 }
 
