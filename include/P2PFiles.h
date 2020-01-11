@@ -54,7 +54,9 @@ public:
     /// @synchronized
     void showFiles();
 
-    std::vector<std::string> getFilePossessors(std::string fileName);
+    std::vector<std::string> getFilePossessors(const std::string& fileName);
+
+    size_t getFileSize(const std::string &fileName);
 };
 
 

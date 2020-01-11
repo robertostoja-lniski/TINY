@@ -89,7 +89,10 @@ ActionResult P2PNode::removeFile(std::string fileName) {
 }
 
 ActionResult P2PNode::downloadFile(const std::string &fileName) {
-    size_t fileSize = handler.getFileSize(fileName);
+    size_t fileSize = globalFiles.getFileSize(fileName);
+    if (fileSize == -1){
+        return ACTION_FAILURE;
+    }
     size_t toDownloadFromEach;
     std::vector<std::string> possessorsIps = globalFiles.getFilePossessors(fileName);
     if (fileSize){
@@ -107,12 +110,13 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
             threads.push_back(std::move(t));
         }
         for (auto &t: threads) {
-            t.join();
+            t.detach();
         }
     }
-    else{
+    else {
         throw std::runtime_error("Nikt nie ma wskazanego pliku \n");
     }
+    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::updateLocalFiles(void) {
