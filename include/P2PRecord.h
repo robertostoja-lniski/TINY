@@ -9,10 +9,12 @@
 #include <string>
 #include <set>
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 #include <shared_mutex>
 #include <vector>
 #include "File.h"
+#include "FileBroadcastStruct.h"
+#include "Communicate.h"
 
 /// @enum Rezultat operacji na rekordzie
 enum RecordOperationResult {
@@ -50,8 +52,6 @@ public:
     /// Usuwa plik z setu plików
     RecordOperationResult removeFile(File);
 
-    // TODO przeciazony operator
-    /// Wypisuje pliki
     void print();
 
     /**
@@ -61,7 +61,8 @@ public:
      * @return wektor par {ilość plików, treść (pliki)}
      * @synchronized
      */
-    std::vector<std::pair<u_short, std::string>> getBroadcastCommunicates();
+    std::unique_ptr<std::vector<Communicate>> getBroadcastCommunicates();
+
 };
 
 

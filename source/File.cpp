@@ -31,3 +31,18 @@ void File::setOwner(const std::string owner) {
 void File::setName(const std::string name) {
     this->name = name;
 }
+
+File::File(FileBroadcastStruct &fileBroadcastStruct) {
+    name = fileBroadcastStruct.name;
+    owner = fileBroadcastStruct.owner;
+    size = fileBroadcastStruct.size;
+}
+
+size_t File::getSize() const {
+    return size;
+}
+
+std::ostream &operator<<(std::ostream &os, const File &file) {
+    os << "name: " << file.name << " owner: " << file.owner << " size: " << file.size;
+    return os;
+}

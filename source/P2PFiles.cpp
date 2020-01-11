@@ -38,3 +38,12 @@ void P2PFiles::addToFilesRevokedByMe(File file) {
     filesRevokedByMe.insert(file);
 }
 
+void P2PFiles::showFiles() {
+    std::shared_lock<std::shared_mutex> lk(mutex);
+
+    for(auto &record: files){
+        std::cout << record.first << ": " << std::endl;
+        record.second.print();
+    }
+}
+

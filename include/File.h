@@ -6,6 +6,8 @@
 #define TINY_FILE_H
 
 #include <string>
+#include <ostream>
+#include "FileBroadcastStruct.h"
 
 /**
  * @class
@@ -19,9 +21,11 @@ class File {
 private:
     std::string name;
     std::string owner;
-    std::size_t size;
+    size_t size;
 public:
     File(const std::string name, const std::string owner, const size_t size);
+    explicit File(FileBroadcastStruct &fileBroadcastStruct);
+
 
     /// Setter dla nazwy
     void setName(const std::string name);
@@ -47,6 +51,8 @@ public:
     bool operator<(File const &file) const {
         return name < file.getName();
     }
+
+    friend std::ostream &operator<<(std::ostream &os, const File &file);
 };
 
 
