@@ -36,3 +36,8 @@ File::File(FileBroadcastStruct &fileBroadcastStruct) {
 size_t File::getSize() const {
     return size;
 }
+
+std::ostream &operator<<(std::ostream &os, const File &file) {
+    os << "name: " << file.name << " owner: " << file.owner << " size: " << file.size;
+    return os;
+}

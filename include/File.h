@@ -6,6 +6,7 @@
 #define TINY_FILE_H
 
 #include <string>
+#include <ostream>
 #include "FileBroadcastStruct.h"
 
 /**
@@ -49,6 +50,8 @@ public:
     bool operator<(File const &file) const {
         return name < file.getName();
     }
+
+    friend std::ostream &operator<<(std::ostream &os, const File &file);
 };
 
 

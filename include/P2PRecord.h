@@ -52,8 +52,6 @@ public:
     /// Usuwa plik z setu plików
     RecordOperationResult removeFile(File);
 
-    // TODO przeciazony operator
-    /// Wypisuje pliki
     void print();
 
     /**
@@ -64,6 +62,7 @@ public:
      * @synchronized
      */
     std::unique_ptr<std::vector<Communicate>> getBroadcastCommunicates();
+
 };
 
 

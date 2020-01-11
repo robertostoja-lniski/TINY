@@ -96,7 +96,7 @@ ActionResult P2PNode::updateLocalFiles(void) {
 }
 
 ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
-    return ACTION_NOT_HANDLED;
+    globalFiles.showFiles();
 }
 
 ActionResult P2PNode::startBroadcastingFiles() {

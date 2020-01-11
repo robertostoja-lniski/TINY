@@ -32,8 +32,8 @@ void P2PRecord::print() {
         return;
     }
 
-    for (auto item : fileSet) {
-        std::cout << item.getName() << " ( owner: " << item.getOwner() << " )\n";
+    for (auto const &item : fileSet) {
+        std::cout << item << std::endl;
     }
     mutex.unlock_shared();
 }
