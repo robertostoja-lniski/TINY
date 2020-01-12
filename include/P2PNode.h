@@ -8,6 +8,7 @@
 #include "P2PFiles.h"
 #include "LocalSystemHandler.h"
 #include <future>
+#include <netinet/in.h>
 #include "Communicate.h"
 
 #define MAX_USERNAME_LEN 40
@@ -69,7 +70,8 @@ private:
     /// uniewaznia plik
     struct Broadcast {
         /// Deskryptor gniazda UDP broadcast
-        int socketFd = -1;
+        int sendSocketFd = -1;
+        int recvSocketFd = -1;
         std::mutex preparationMutex, exitMutex;
         /// @synchronized
         bool exit = false;
@@ -78,6 +80,9 @@ private:
         std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
 
         static const int UDP_BROADCAST_PORT = 7654;
+        char *UDP_BROADCAST_IP = "192.168.0.255";
+
+
     } broadcast;
 
     /// Inicjalizuje gniazdo do rozgłaszania

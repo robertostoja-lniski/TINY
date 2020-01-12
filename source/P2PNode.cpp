@@ -76,10 +76,10 @@ ActionResult P2PNode::removeFile(std::string fileName) {
     globalFiles.revoke(tmp);
     globalFiles.addToFilesRevokedByMe(tmp);
 
-//    if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
-//        uploadFile(revokeFileName);
-//        return ACTION_FAILURE;
-//    }
+    if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
+        uploadFile(fileName);
+        return ACTION_FAILURE;
+    }
 
     if(handler.removeFileFromLocalSystem(fileName) != FILE_SUCCESS) {
         uploadFile(fileName);
@@ -164,7 +164,8 @@ P2PNode::~P2PNode() {
     broadcast.recvThread.join();
 
     // Zamknij gniazdo broadcastowe
-    close(broadcast.socketFd);
+    close(broadcast.sendSocketFd);
+    close(broadcast.recvSocketFd);
 }
 
 
@@ -321,34 +322,60 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
     std::unique_lock<std::mutex> lk(broadcast.preparationMutex);
 
     if (restart) {
-        close(broadcast.socketFd);
-        broadcast.socketFd = -1;
+        close(broadcast.sendSocketFd);
+        close(broadcast.recvSocketFd);
+        broadcast.recvSocketFd = -1;
+        broadcast.sendSocketFd = -1;
     }
 
-    int fd = broadcast.socketFd;
-    if (fd >= 0) {
+    int sendFd = broadcast.sendSocketFd;
+    int recvFd = broadcast.recvSocketFd;
+    if (sendFd >= 0 && recvFd >= 0) {
         return ACTION_SUCCESS;
     }
 
-    // Otwórz gniazdo
-    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        std::cout << "Nie udalo sie otworzyc gniazda. Numer bledu: " << errno << std::endl;
-        return ACTION_FAILURE;
+    auto socketHandler = [this](int &fd) {
+        // Otwórz gniazdo
+        if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            std::cout << "Nie udalo sie otworzyc gniazda. Numer bledu: " << errno << std::endl;
+            return ACTION_FAILURE;
+        }
+
+        int broadcastPermission = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void *) &broadcastPermission, sizeof(broadcastPermission)) <
+            0) {
+            std::cout << "Broadcast not allowed";
+            close(fd);
+            return ACTION_FAILURE;
+        }
+
+        struct sockaddr_in address;
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = inet_addr(broadcast.UDP_BROADCAST_IP);
+        address.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+
+        // Bind adres do gniazda
+        if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
+            close(fd);
+            std::cout << "Nie udalo sie przypisac adresu do gniazda. Numer bledu: " << errno << std::endl;
+            return ACTION_FAILURE;
+        }
+        return ACTION_SUCCESS;
+    };
+
+    ActionResult actionResult = socketHandler(sendFd);
+    if(actionResult != ACTION_SUCCESS){
+        return actionResult;
     }
 
-    struct sockaddr_in address;
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY);
-    address.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
-
-    // Bind adres do gniazda
-    if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
-        close(fd);
-        std::cout << "Nie udalo sie przypisac adresu do gniazda. Numer bledu: " << errno << std::endl;
-        return ACTION_FAILURE;
+    actionResult = socketHandler(recvFd);
+    if(actionResult != ACTION_SUCCESS){
+        close(sendFd);
+        return actionResult;
     }
 
-    this->broadcast.socketFd = fd;
+    this->broadcast.sendSocketFd = sendFd;
+    this->broadcast.recvSocketFd = recvFd;
 
     return ACTION_SUCCESS;
 }
@@ -363,7 +390,7 @@ ActionResult P2PNode::sendRevokeCommunicate(File file) {
 
     Communicate communicate(FileBroadcastStruct(file.getName(), file.getOwner(), file.getSize()), handler.getUserName());
 
-    if (send(broadcast.socketFd, (void *) &communicate, (int) sizeof(communicate), 0) < (int) sizeof(communicate)) {
+    if (send(broadcast.sendSocketFd, (void *) &communicate, (int) sizeof(communicate), 0) < (int) sizeof(communicate)) {
         return ACTION_FAILURE;
     }
     return ACTION_SUCCESS;
