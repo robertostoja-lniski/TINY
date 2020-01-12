@@ -140,6 +140,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
                                 std::this_thread::sleep_for(std::chrono::seconds(broadcast.restartConnectionInterval));
                             }
                             failuresCount = 0;
+                            break;
                         }
                     }
                 }
