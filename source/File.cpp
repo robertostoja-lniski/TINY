@@ -40,6 +40,6 @@ File::File(FileBroadcastStruct &fileBroadcastStruct) {
 
 
 std::ostream &operator<<(std::ostream &os, const File &file) {
-    os << "name: " << file.name << " owner: " << file.owner << " size: " << file.size;
+    os << "name: " << file.name << " ---|--- owner: " << file.owner << " ---|--- size: " << file.size;
     return os;
 }

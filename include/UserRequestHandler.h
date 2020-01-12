@@ -33,7 +33,7 @@ class UserRequestHandler {
 private:
 
     /// Pojedyncze komendy - vector użyty w celu uproszczenia deklaracji
-    const std::vector<std::string> singleCommands = {"ls-my", "ls", "ls-owners"};
+    const std::vector<std::string> singleCommands = {"ls-my", "ls", "ls-owners", "help", "exit"};
 
     /// Podwójne komendy
     const std::vector<std::string> doubleCommandsPrefix = {"get", "add", "put", "rm"};
@@ -61,6 +61,8 @@ private:
     static void printHelp();
 
     static void printUnknownCommandMsg();
+
+    void printPrompt();
 
 public:
     /// Konstruktor

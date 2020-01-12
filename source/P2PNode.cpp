@@ -39,7 +39,7 @@ ActionResult P2PNode::uploadFile(std::string uploadFileName) {
     }
 
     std::string systemFileName = handler.getLastTokenOf(uploadFileName);
-    size_t fileSize = handler.getFileSize(uploadFileName);
+    size_t fileSize = handler.getFileSize(systemFileName);
     File file(systemFileName, handler.getUserName(), fileSize);
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
@@ -99,6 +99,7 @@ ActionResult P2PNode::updateLocalFiles(void) {
 
 ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
     globalFiles.showFiles();
+    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::startBroadcastingFiles() {
@@ -159,8 +160,8 @@ P2PNode::~P2PNode() {
     broadcast.exitMutex.unlock();
 
     // Poczekaj aż broadczast się skończy
-//    broadcast.sendThread.join();
-//    broadcast.recvThread.join();
+    broadcast.sendThread.join();
+    broadcast.recvThread.join();
 
     // Zamknij gniazdo broadcastowe
     close(broadcast.socketFd);

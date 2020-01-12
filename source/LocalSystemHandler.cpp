@@ -7,6 +7,9 @@
 LocalSystemHandler::LocalSystemHandler() {}
 
 std::string LocalSystemHandler::getUserName() {
+#if __APPLE__
+    return "wojciechsitek";
+#endif
     char linuxName[MAX_USERNAME_LEN];
     memset(linuxName, 0x00, MAX_USERNAME_LEN);
 
