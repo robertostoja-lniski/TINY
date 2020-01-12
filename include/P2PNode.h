@@ -80,7 +80,7 @@ private:
         std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
 
         static const int UDP_BROADCAST_PORT = 7654;
-        char *UDP_BROADCAST_IP = "192.168.0.255";
+        char *UDP_BROADCAST_IP = "192.168.1.255";
 
 
     } broadcast;
