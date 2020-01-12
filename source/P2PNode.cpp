@@ -123,10 +123,10 @@ ActionResult P2PNode::startBroadcastingFiles() {
 
             auto communicates = localFiles.getBroadcastCommunicates();
 
-            for (auto c: *communicates) {
-                if (!c.files.empty()) {
-                    int structSize = (int) sizeof(c);
-                    while (send(broadcast.socketFd, &c, structSize, 0) < structSize ) {
+            for (auto communicate: *communicates) {
+                if (communicate.filesCount != 0) {
+                    int structSize = (int) sizeof(communicate);
+                    while (send(broadcast.sendSocketFd, &communicate, structSize, 0) < structSize ) {
                         if (++failuresCount > 10) {
                             while (prepareForBroadcast(true) != ACTION_SUCCESS) {
                                 // Sprawdzenie warunku czy wychodzimy z petli
@@ -405,6 +405,7 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
     }
 
     broadcast.recvThread = std::thread([this]() {
+        auto communicate = std::make_unique<Communicate>();
         while (true) {
             // Sprawdzenie warunku czy wychodzimy z petli
             broadcast.exitMutex.lock();
@@ -414,24 +415,22 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             }
             broadcast.exitMutex.unlock();
 
-
-            Communicate communicate;
-            if (recv(broadcast.socketFd, (void *) &communicate, 1024 * 64, 0) < 0) {
+            if (recv(broadcast.recvSocketFd, (void *) communicate.get(), 1024 * 64, 0) < 0) {
                 continue;
             }
-            if (communicate.type == UDP_BROADCAST) {
-                for (auto file: communicate.files) {
-                    if (globalFiles.add(communicate.userName, File(file)) == ADD_GLOBAL_REVOKED) {
-
-                        sendRevokeCommunicate(File(file));
+            if (communicate->type == UDP_BROADCAST) {
+                FileBroadcastStruct *file = communicate->files;
+                for (int i = 0; i < communicate->filesCount; ++i, ++file) {
+                    if (globalFiles.add(communicate->userName, File(*file)) == ADD_GLOBAL_REVOKED) {
+                        sendRevokeCommunicate(File(*file));
                     }
                 }
             }
             else {
                 //revoke communicate type
-                removeFile(communicate.revokedFile.name);
-                globalFiles.revoke(File(communicate.revokedFile));
-                localFiles.removeFile(File(communicate.revokedFile));
+                removeFile(communicate->revokedFile.name);
+                globalFiles.revoke(File(communicate->revokedFile));
+                localFiles.removeFile(File(communicate->revokedFile));
                 updateLocalFiles();
             }
         }

@@ -14,7 +14,7 @@ if (APPLE)
     set(CMAKE_CXX_STANDARD_LIBRARIES "-mmacosx-version-min=10.15")
 endif ()
 
-set(CMAKE_CXX_FLAGS "-pthread")
+set(CMAKE_CXX_FLAGS "-pthread -Wno-writable-strings")
 
 file(GLOB SOURCES "source/*.cpp")
 set(SOURCES ${SOURCES})
