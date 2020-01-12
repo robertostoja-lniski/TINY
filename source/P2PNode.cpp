@@ -127,7 +127,8 @@ ActionResult P2PNode::startBroadcastingFiles() {
 
                 // wiadomosc ma postac
                 // [bajt - 0, lub 1 - typ wiadomosci][ 8 bajtow - rozmiar ][ 64 bajty nazwa wysylajacego ][ 136 bajtow ][ 136 bajtow ][ 136 bajtow ] ...
-                uint8_t* broadcastMsg = (uint8_t* )malloc(filesToSendNow * sizeof(BroadcastStruct) + sizeof(char) + sizeof(size_t) + 64 * sizeof(char));
+                size_t fullSize = filesToSendNow * sizeof(BroadcastStruct) + sizeof(char) + sizeof(size_t) + 64 * sizeof(char);
+                uint8_t* broadcastMsg = (uint8_t* )malloc(fullSize);
                 if(broadcastMsg == nullptr){
                     broadcast.exitMutex.lock();
                     if (broadcast.exit) {
@@ -151,14 +152,14 @@ ActionResult P2PNode::startBroadcastingFiles() {
                 strncpy(senderInfoAddress, handler.getUserName().c_str(), MAX_USERNAME_LEN - 1);
                 std::cout << "wysylajacy: " << std::string(senderInfoAddress) << "|";
 
-                BroadcastStruct* broadcastStructAddress = (BroadcastStruct* )((uint8_t* )senderInfoAddress + sizeof(size_t) + 64*sizeof(char));
+                BroadcastStruct* broadcastStructAddress = (BroadcastStruct* )((uint8_t* )senderInfoAddress + 64*sizeof(char));
                 for(int i = 0; i < filesToSendNow; i++){
 
                     BroadcastStruct msg {};
                     strncpy(msg.name, communicates[fileId].getName().c_str(), B_FILENAME_LEN - 1);
                     strncpy(msg.owner, communicates[fileId].getOwner().c_str(), B_OWNER_NAME_LEN - 1);
                     // tymczasowo
-                    msg.size = 0;
+                    msg.size = communicates[fileId].getSize();
                     fileId ++;
                     std::cout << "wielkosc: " << msg.size << "| nazwa: "  << msg.name << "| wlasciciel: " << msg.owner << "||";
 
@@ -166,12 +167,9 @@ ActionResult P2PNode::startBroadcastingFiles() {
                 }
                 std::cout << "\n";
 
-                size_t fullBroadcastMsgSize = sizeof(broadcastMsg);
-                const char* sendString = std::string("siema").c_str();
-
-                while (sendto(broadcast.socketFd, broadcastMsg, fullBroadcastMsgSize,
+                while (sendto(broadcast.socketFd, broadcastMsg, fullSize,
                         MSG_CONFIRM, (const struct sockaddr *) &broadcast.addrToSend,
-                                sizeof(broadcast.addrToSend)) < fullBroadcastMsgSize) {
+                                sizeof(broadcast.addrToSend)) < fullSize) {
 
                     if (++failuresCount > BROADCAST_FAILURE_LIMIT) {
                         while (prepareForBroadcastSending(true) != ACTION_SUCCESS) {
@@ -408,8 +406,8 @@ ActionResult P2PNode::sendRevokeCommunicate(const File file) {
         return actionResult;
     }
 
-    uint8_t* broadcastMsg = (uint8_t* )malloc( sizeof(BroadcastStruct)
-            + sizeof(char) + sizeof(size_t) + 64 * sizeof(char));
+    size_t fullSize = sizeof(BroadcastStruct) + sizeof(char) + sizeof(size_t) + 64 * sizeof(char);
+    uint8_t* broadcastMsg = (uint8_t* )malloc(fullSize);
     // dla revoke
     *broadcastMsg = '1';
     // ilosc plikow wynosi 1
@@ -425,12 +423,11 @@ ActionResult P2PNode::sendRevokeCommunicate(const File file) {
     strncpy(msg.name, file.getName().c_str(), B_FILENAME_LEN - 1);
     strncpy(msg.owner, file.getOwner().c_str(), B_OWNER_NAME_LEN - 1);
     // tymczasowo
-    msg.size = 0;
+    msg.size = file.getSize();
     *pRevokedFileAddress = msg;
 
-    size_t msgSize = sizeof(broadcastMsg);
-    if (sendto(broadcast.socketFd, broadcastMsg, msgSize, MSG_CONFIRM,
-               (const struct sockaddr *) &broadcast.addrToSend, sizeof(broadcast.addrToSend)) < msgSize) {
+    if (sendto(broadcast.socketFd, broadcastMsg, fullSize, MSG_CONFIRM,
+               (const struct sockaddr *) &broadcast.addrToSend, sizeof(broadcast.addrToSend)) < fullSize) {
         return ACTION_FAILURE;
     }
     return ACTION_SUCCESS;
@@ -459,7 +456,7 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             }
             broadcast.exitMutex.unlock();
 
-            if (recv(broadcast.socketFd, buf, sizeof(buf), 0) < 0) {
+            if (recvfrom(broadcast.socketFd, buf, LONGEST_STRING, 0, NULL, 0) < 0) {
                 continue;
             }
 
@@ -471,8 +468,8 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             size_t msgNum = *pMsgSize;
             // sender
             char senderName[MAX_USERNAME_LEN];
-            size_t* pSender = pMsgSize + 1;
-            strncpy(senderName, (char* )pSender, MAX_USERNAME_LEN - 1);
+            char* pSender = (char* )(pMsgSize + 1);
+            strncpy(senderName, pSender, MAX_USERNAME_LEN - 1);
 
             BroadcastStruct* currentStruct = (BroadcastStruct* )((uint8_t* )pSender + 64 * sizeof(char));
             for(int i = 0; i < msgNum; i++) {
