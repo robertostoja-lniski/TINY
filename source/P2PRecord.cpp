@@ -25,17 +25,15 @@ AddFileResult P2PRecord::addFile(File file) {
 }
 
 void P2PRecord::print() {
-    mutex.lock_shared();
+    std::shared_lock<std::shared_mutex>(mutex);
     if (fileSet.empty()) {
-        std::cout << "Nie posiadasz plikow w systemie\n";
-        mutex.lock_shared();
+        std::cout << "System globalny nie posiada plikow." << std::endl;
         return;
     }
 
     for (auto const &item : fileSet) {
         std::cout << item << std::endl;
     }
-    mutex.unlock_shared();
 }
 
 RecordOperationResult P2PRecord::removeFile(File file) {
