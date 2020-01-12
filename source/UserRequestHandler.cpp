@@ -8,10 +8,18 @@ RequestResult UserRequestHandler::processRequest(const std::string &request) {
         ret = node.showLocalFiles();
 
     } else if (request == "ls") {
-        ret = node.showGlobalFiles(DO_NOT_PRINT_OWNERS);
-
-    } else if (request == "ls-owner") {
+        ret = node.showLocalFiles();
+        if(ret == ACTION_SUCCESS) {
+            ret = node.showGlobalFiles(DO_NOT_PRINT_OWNERS);
+        }
+    } else if (request == "ls-owners") {
         ret = node.showGlobalFiles(PRINT_OWNERS);
+    } else if (request == "help") {
+        printHelp();
+        return REQUEST_SUCCESS;
+    } else if(request == "exit"){
+        std::cout << "Exit program" << std::endl;
+        throw std::exception();
     }
 
     if (ret != ACTION_SUCCESS) {
@@ -55,11 +63,13 @@ void UserRequestHandler::printHelp() {
     std::cout << "get [nazwa_pliku]                             \tpobranie pilku\n";
     std::cout << "put [sciezka_do_pliku]/[nazwa_pliku]          \tdodanie pliku do systemu\n";
     std::cout << "rm [nazwa_pliku]                              \tusuwa plik z systemu\n";
+    std::cout << "exit                                          \twyjscie z programu\n";
 }
 
 void UserRequestHandler::waitForRequest() {
 
     printHelp();
+    printPrompt();
     // dzieki std::ws nie mamy bialych znakow na poczatku wiersza
     for (std::string userInput; getline(std::cin >> std::ws, userInput, '\n');) {
 
@@ -70,7 +80,7 @@ void UserRequestHandler::waitForRequest() {
 
         if (requestType == NOT_A_REQUEST) {
             printUnknownCommandMsg();
-            printHelp();
+            printPrompt();
             std::cin.ignore(INT64_MAX);
             continue;
         }
@@ -87,6 +97,7 @@ void UserRequestHandler::waitForRequest() {
         if (requestRet != REQUEST_SUCCESS) {
             printHelp();
         }
+        printPrompt();
     }
 }
 
@@ -141,4 +152,9 @@ void UserRequestHandler::printUnknownCommandMsg() {
 
 UserRequestHandler::UserRequestHandler(P2PNode &node) : node(node) {
 
+}
+
+void UserRequestHandler::printPrompt() {
+    std::cout << ">>> help - lista komend" << std::endl;
+    std::cout << "TINBash> ";
 }
