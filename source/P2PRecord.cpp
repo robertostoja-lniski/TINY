@@ -25,7 +25,7 @@ AddFileResult P2PRecord::addFile(File file) {
 }
 
 void P2PRecord::print() {
-    std::shared_lock<std::shared_mutex>(mutex);
+    std::shared_lock<std::shared_mutex> lk(mutex);
     if (fileSet.empty()) {
         std::cout << "System globalny nie posiada plikow." << std::endl;
         return;
@@ -43,7 +43,7 @@ RecordOperationResult P2PRecord::removeFile(File file) {
     auto pos = fileSet.find(file);
 
     if (pos == fileSet.end()) {
-        mutex.lock_shared();
+        mutex.unlock_shared();
         return FILE_NOT_FOUND;
     }
 
@@ -57,22 +57,25 @@ RecordOperationResult P2PRecord::removeFile(File file) {
 }
 
 std::unique_ptr<std::vector<Communicate>> P2PRecord::getBroadcastCommunicates() {
-    // maksymalna ilość plików w jednym komunikacie = 253
-    auto communicates = std::make_unique<std::vector<Communicate>>();
+    auto N = Communicate::MAX_FILES_IN_COM;
+    std::shared_lock<std::shared_mutex> lk(this->mutex);
 
-    mutex.lock_shared();
-    communicates->push_back(Communicate());
-    auto &currentCommunicatesVector = communicates->back().files;
-    for (auto file: fileSet) {
-        FileBroadcastStruct fileBroadcastStruct(file.getName(), file.getOwner(), file.getSize());
-        currentCommunicatesVector.push_back(fileBroadcastStruct);
-        if (communicates->back().files.size() >= 256) {
-            communicates->push_back(Communicate());
-            currentCommunicatesVector = communicates->back().files;
+    int fullCommunicatesCount = (int) fileSet.size() / N;
+    const int lastCommunicateSize = (int) fileSet.size() % N;
+    auto communicates = std::make_unique<std::vector<Communicate>>(fullCommunicatesCount, Communicate());
+    communicates->push_back(Communicate(lastCommunicateSize));
 
+    auto record_it = fileSet.begin();
+    for(auto communicate : *communicates) {
+        FileBroadcastStruct *file = communicate.files;
+        auto filesCount = communicate.filesCount;
+
+        for (auto i = 0; i < filesCount; ++i, ++file, ++record_it) {
+            auto const& f = *record_it;
+            *file = FileBroadcastStruct(f.getName(), f.getOwner(), f.getSize());
         }
     }
-    mutex.unlock_shared();
     return communicates;
+
 }
 

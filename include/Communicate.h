@@ -19,14 +19,17 @@ enum UDPCommunicateType {
 };
 
 struct Communicate {
+    const size_t filesCount;
     UDPCommunicateType type;
     char userName[64];
-    std::vector<FileBroadcastStruct> files;
     FileBroadcastStruct revokedFile;
+    static const int MAX_FILES_IN_COM = 64;
+    FileBroadcastStruct files[MAX_FILES_IN_COM];
+
 
     explicit Communicate(std::string userName_, UDPCommunicateType type_ = UDP_BROADCAST);
     Communicate(UDPCommunicateType type_);
-    Communicate();
+    Communicate(int filesCount_ = MAX_FILES_IN_COM);
     Communicate(FileBroadcastStruct revokedFile_, std::string userName);
 };
 
