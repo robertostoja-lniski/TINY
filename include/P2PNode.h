@@ -143,6 +143,8 @@ public:
     virtual ~P2PNode();
 
     void requestAndDownloadFileFragment(fileRequest request, std::string ip_addr);
+
+    ActionResult performDownloadingFileFragment(fileRequest request, std::string ip_addr);
 };
 
 #endif //TINY_P2PNODE_H

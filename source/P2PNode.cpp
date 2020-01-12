@@ -86,12 +86,14 @@ ActionResult P2PNode::removeFile(std::string fileName) {
 }
 
 ActionResult P2PNode::downloadFile(const std::string &fileName) {
-    size_t fileSize = globalFiles.getFileSize(fileName);
+    //size_t fileSize = globalFiles.getFileSize(fileName);
+    size_t fileSize = 100;
     if (fileSize == -1){
         return ACTION_FAILURE;
     }
     size_t toDownloadFromEach;
-    std::vector<std::string> possessorsIps = globalFiles.getFilePossessors(fileName);
+    //std::vector<std::string> possessorsIps = globalFiles.getFilePossessors(fileName);
+    std::vector<std::string> possessorsIps = {"192.168.0.38"};
     if (fileSize){
         toDownloadFromEach = fileSize/possessorsIps.size();
         size_t rest = fileSize%possessorsIps.size();
@@ -103,7 +105,7 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
             request.offset = i * toDownloadFromEach;
             //ktos musi doslac fragment, ktory pozostanie z dzielenia.
             request.bytes += (i == possessorsIps.size() -1 ) ? rest : 0;
-            std::thread t(&P2PNode::requestAndDownloadFileFragment, this, request, possessorsIps[i]);
+            std::thread t(&P2PNode::performDownloadingFileFragment, this, request, possessorsIps[i]);
             threads.push_back(std::move(t));
         }
         for (auto &t: threads) {
@@ -341,8 +343,19 @@ void P2PNode::handleDownloadRequests() {
 // jezeli nie to zamykamy socket klienta
 // wywolujemy ponowanie waitForDownloadRequest i czekamy na nastepne zadanie pobierania
 ActionResult P2PNode::startHandlingDownloadRequests() {
+
     std::thread t1(&P2PNode::handleDownloadRequests, this);
     t1.detach();
+    return ACTION_SUCCESS;
+}
+
+ActionResult P2PNode::performDownloadingFileFragment(fileRequest request, std::string ip_addr){
+    try{
+        requestAndDownloadFileFragment(request, ip_addr);
+    }
+    catch(std::runtime_error &e){
+        return ACTION_FAILURE;
+    }
     return ACTION_SUCCESS;
 }
 

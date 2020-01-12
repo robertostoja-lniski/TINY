@@ -17,7 +17,7 @@ int main() {
        // strcpy(request.fileName, "file.txt");
        // std::cout << request.fileName << "\n";
        // node.requestAndDownloadFileFragment(request, "192.168.122.1");
-
+        node.downloadFile("b");
         requestHandler.waitForRequest();
     }
         // kazdy blad ktory jest krytyczny i uniemozliwia wykonanie programu bedzie tutaj zlapany
