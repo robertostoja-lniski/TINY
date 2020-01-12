@@ -10,6 +10,10 @@
 #include <future>
 #include "BroadcastStruct.h"
 #include "cmath"
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #define MAX_USERNAME_LEN 64
 #define MAX_FILENAME_LEN 500
@@ -87,12 +91,17 @@ private:
         std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
 
         static const int UDP_BROADCAST_PORT = 7654;
+        char *broadcastIp = "192.168.0.255";
+
+        struct sockaddr_in addrToSend;
+        struct sockaddr_in addrToReceive;
+
     } broadcast;
 
     /// Inicjalizuje gniazdo do rozgłaszania
     /// @param restart czy restartujemy połączenie
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
-    ActionResult prepareForBroadcast(bool restart = false);
+    ActionResult prepareForBroadcastSending(bool restart = false);
 
 public:
 

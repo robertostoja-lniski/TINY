@@ -1,11 +1,8 @@
-# TINY
+# Jak testowac broadcast?
 
-# Bardzo wazne !!! sudo apt-get install libboost-all-dev !!!
-# W Clionie wybierzcie opcje New CMakeProject from sources
-# Wybierzcie folder z pobranym repo
-# Podmiencie pliki CMakeLists na te z gita
-sieć P2P
+ifconfig - sprawdz adres broadcast i przypisz go w P2PNode.h
+skompiluj server
+(gcc -o server serverA.c)
+i uruchom go na porcie 7654 w jakims randomowym terminalu
 
-nalezy pobrac sobie pakiet boosta, zeby dzialalo
-Boosta dodalem do sprawdzania sciezek do plikow
-sudo apt-get install libboost-all-dev
+odpal program na tiny no i tyle XD - dekodowanie dodam dzis pozna noca
