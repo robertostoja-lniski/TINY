@@ -334,25 +334,25 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
         return ACTION_SUCCESS;
     }
 
-    auto socketHandler = [this](int &fd) {
+    auto socketHandler = [this](int &fd, struct sockaddr_in &address) {
         // Otwórz gniazdo
         if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
             std::cout << "Nie udalo sie otworzyc gniazda. Numer bledu: " << errno << std::endl;
             return ACTION_FAILURE;
         }
 
-        int broadcastPermission = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void *) &broadcastPermission, sizeof(broadcastPermission)) <
-            0) {
+        int sockoptVar = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
             std::cout << "Broadcast not allowed";
             close(fd);
             return ACTION_FAILURE;
         }
 
-        struct sockaddr_in address;
-        address.sin_family = AF_INET;
-        address.sin_addr.s_addr = inet_addr(broadcast.UDP_BROADCAST_IP);
-        address.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
+            std::cout << "Reuse not allowed";
+            close(fd);
+            return ACTION_FAILURE;
+        }
 
         // Bind adres do gniazda
         if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
@@ -363,12 +363,23 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
         return ACTION_SUCCESS;
     };
 
-    ActionResult actionResult = socketHandler(sendFd);
+    struct sockaddr_in sendAddress;
+    sendAddress.sin_family = AF_INET;
+    sendAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+    sendAddress.sin_addr.s_addr = inet_addr(broadcast.UDP_BROADCAST_IP);
+
+    struct sockaddr_in recvAddress;
+    recvAddress.sin_family = AF_INET;
+    recvAddress.sin_addr.s_addr = INADDR_ANY;
+    recvAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+
+
+    ActionResult actionResult = socketHandler(sendFd, sendAddress);
     if(actionResult != ACTION_SUCCESS){
         return actionResult;
     }
 
-    actionResult = socketHandler(recvFd);
+    actionResult = socketHandler(recvFd, recvAddress);
     if(actionResult != ACTION_SUCCESS){
         close(sendFd);
         return actionResult;
