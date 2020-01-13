@@ -96,12 +96,15 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
     //std::vector<std::string> possessorsIps = globalFiles.getFilePossessors(fileName);
     std::vector<std::string> possessorsIps = {"192.168.0.38"};
     if (fileSize){
+        //pobranie ilosci bajtow do pobrania od kazdego wysylajacego
         toDownloadFromEach = fileSize/possessorsIps.size();
         size_t rest = fileSize%possessorsIps.size();
         fileRequest request {};
         strcpy(request.fileName, fileName.c_str());
         request.bytes = toDownloadFromEach;
+        //rezultaty wykonan poszczegolnych pobieran
         std::vector <std::future<ActionResult >> results;
+
         for (auto i = 0; i < possessorsIps.size(); i++){
             request.offset = i * toDownloadFromEach;
             //ktos musi doslac fragment, ktory pozostanie z dzielenia.
@@ -109,9 +112,25 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
             std::future<ActionResult> t = std::async(&P2PNode::performDownloadingFileFragment, this, request, possessorsIps[i]);
             results.push_back(std::move(t));
         }
+        //sprawdzamy czy wszystkie pobierania wykonaly sie poprawnie
         for (int i = 0; i <= results.size(); i++) {
-            if (results[i].get() == ACTION_FAILURE){
 
+            ActionResult result = results[i].get();
+            //jezeli nie, to czekamy ? sekund na kolejny broadcast i ponownie sprawdzamy kto ma dany plik
+            while (result == ACTION_FAILURE) {
+                sleep(5);
+                possessorsIps = globalFiles.getFilePossessors(fileName);
+
+                //iterujemy po posiadaczach pliku i jezeli uda nam sie pobrac od kogos to breakujemy petle.
+                for (auto possessor : possessorsIps){
+                    request.offset = i * toDownloadFromEach;
+                    request.bytes = toDownloadFromEach + ((i == results.size() - 1) ? rest : 0);
+                    std::future<ActionResult> t = std::async(&P2PNode::performDownloadingFileFragment, this, request, possessorsIps[i]);
+                    result = t.get();
+                    if (result == ACTION_SUCCESS) {
+                        break;
+                    }
+                }
             }
         }
     }
