@@ -165,8 +165,6 @@ namespace logging {
                 last_reopen = now;
                 try{ file.close(); }catch(...){}
                 try {
-                    std::cout << file_name <<" here\n";
-
                     file.open(file_name, std::ofstream::out | std::ofstream::app);
                     last_reopen = std::chrono::system_clock::now();
                 }

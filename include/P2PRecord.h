@@ -15,6 +15,7 @@
 #include "File.h"
 #include "FileBroadcastStruct.h"
 #include "Communicate.h"
+#include "Defines.h"
 
 /// @enum Rezultat operacji na rekordzie
 enum RecordOperationResult {
@@ -47,10 +48,10 @@ public:
     /// Dodaje plik do setu plików
     /// @if plik już dodany @then nie dodaje i zwraca ADD_ALREADY_EXISTS
     /// @return @enum AddFileResult
-    AddFileResult addFile(File);
+    AddFileResult addFile(const File&);
 
     /// Usuwa plik z setu plików
-    RecordOperationResult removeFile(File);
+    RecordOperationResult removeFile(const File&);
 
     void print();
 
@@ -61,7 +62,7 @@ public:
      * @return wektor par {ilość plików, treść (pliki)}
      * @synchronized
      */
-    std::unique_ptr<std::vector<Communicate>> getBroadcastCommunicates();
+    std::vector<Communicate> getBroadcastCommunicates(const std::string&);
 
 };
 
