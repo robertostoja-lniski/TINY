@@ -336,7 +336,7 @@ ActionResult P2PNode::startBroadcastingFiles() {
                 logging::TRACE("Wysyłam komunikat: " + communicate.toString());
 
                 if (sendto(broadcast.sendSocketFd, (void *) &communicate, size, 0,
-                           (struct sockaddr *) &broadcast.sendAddress, sizeof(broadcast.sendAddress)) < size) {
+                           (struct sockaddr *) &broadcast.sendAddress, sizeof(broadcast.sendAddress), 0.0) < size) {
                     logging::ERROR("Nie udalo sie sendto w broadcascie.");
 
                 }
