@@ -10,9 +10,9 @@ void Communicate::clearMemory() {
     memset(files, 0x00, MAX_FILES_IN_COM* sizeof(FileBroadcastStruct));
 }
 
-// NOLINT(cppcoreguidelines-pro-type-member-init)
 Communicate::Communicate(FileBroadcastStruct revokedFile, const std::string& userName_)
         : filesCount(1) {
+    clearMemory();
     files[0] = revokedFile;
     type = UDP_REVOKE;
     strncpy(userName, userName_.c_str(), MAX_USERNAME_LEN - 1);
@@ -21,6 +21,7 @@ Communicate::Communicate(FileBroadcastStruct revokedFile, const std::string& use
 
 Communicate::Communicate(size_t filesCount_, std::string userName_)
         : filesCount(filesCount_), type(UDP_BROADCAST){
+    clearMemory();
     strncpy(userName, userName_.c_str(), 63);
 }
 
@@ -36,5 +37,7 @@ std::string Communicate::toString() {
     return result;
 }
 
-Communicate::Communicate() {}
+Communicate::Communicate() {
+    clearMemory();
+}
 
