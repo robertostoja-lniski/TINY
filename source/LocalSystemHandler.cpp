@@ -32,7 +32,7 @@ std::string LocalSystemHandler::getLastTokenOf(const std::string filepath) {
     }
     return filename;
 }
-bool LocalSystemHandler::isFsFilePathCorrect(std::string filepath) {
+bool LocalSystemHandler::isFsFilePathCorrect(std::string &filepath) {
 
     // sciezki powinne rozrozniac uzytkownikow
     // inne nie powinny byc akceptowane
@@ -66,7 +66,7 @@ bool LocalSystemHandler::isNetworkFilePathCorrect(std::string filepath) {
 
     std::string fullPathToFile = workspaceAbsoluteDirPath + filepath;
     if (!filesys::exists(fullPathToFile)) {
-        std::cout << "Nieistniejaca sciezka\n";
+        std::cout << "Nieistniejaca sciezka:" + fullPathToFile + "\n";
         return false;
     }
 
@@ -90,7 +90,7 @@ FileOperationResult LocalSystemHandler::addFileToLocalSystem(std::string filepat
 
     std::string linkPath = workspaceAbsoluteDirPath + filename;
     if (link(filepath.c_str(), linkPath.c_str()) != 0) {
-        std::cout << "Link sie nie powiodl, taki plik istnieje albo wystapil blad w sciezce\n";
+        std::cout << "Taki plik już istnieje w systemie\n";
         return FILE_CANNOT_ADD_TO_WORKSPACE;
     }
 
@@ -103,7 +103,7 @@ FileOperationResult LocalSystemHandler::removeFileFromLocalSystem(std::string fi
 
     std::string fullPathToFile = workspaceAbsoluteDirPath + fileToRemove;
 
-    if (updateConfig(fileToRemove, CONFIG_REMOVE) != FILE_SUCCESS) {
+    if (removeFromConfigByName(fileToRemove) != FILE_SUCCESS) {
         std::cout << "Plik nie mogl zostac usuniety z pliku konfiguracyjengo\n";
         std::cout << "Usuwanie nie powiodlo sie\n";
         return FILE_CANNOT_REMOVE_FROM_CONFIG;
@@ -147,7 +147,7 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
     return DIR_SUCCESS;
 }
 
-std::vector<std::string> LocalSystemHandler::getPreviousState() {
+std::vector<std::tuple<std::string, std::string, size_t>> LocalSystemHandler::getPreviousState() {
 
     std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
     if(!isFsFilePathCorrect(fullConfigFilePath)) {
@@ -162,26 +162,81 @@ std::vector<std::string> LocalSystemHandler::getPreviousState() {
     std::string configRecord;
     // nazwa pliku zapisana w konfiguracji
     std::string fileName;
-
+    std::string fileOwner;
+    size_t fileSize;
     // otwiera plik i iteruje po nim
     configFile.open(fullConfigFilePath, std::ios::in);
-    std::vector<std::string> filesToUpload;
+    std::vector<std::tuple<std::string, std::string, size_t>> previousState;
 
     while (std::getline(infile, configRecord)) {
 
         std::istringstream iss(configRecord);
-        if (!(iss >> fileName)) {
+        if (!(iss >> fileName >> fileOwner >> fileSize)) {
             throw std::runtime_error("Wrong config file");
         }
 
-        filesToUpload.push_back(fileName);
+        previousState.emplace_back(fileName, fileOwner, fileSize);
     }
 
     configFile.close();
-    return filesToUpload;
+    return previousState;
 }
 
-FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, ConfigOperation action) {
+FileOperationResult LocalSystemHandler::removeFromConfigByName(std::string name) {
+
+    std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
+
+    if(!isFsFilePathCorrect(fullConfigFilePath)){
+        return FILE_PATH_CORRUPTED;
+    }
+    // dopisz plik do pliku konfiguracyjnego
+    std::ofstream configFile;
+    /*
+    * tworzy plik tymczasowy juz bez usunietego rekordu
+    * nastepnie zastepuje nim konfiguracyjny
+    */
+    // otwiera plik do odczytu
+    std::ifstream infile(fullConfigFilePath);
+    // wiersz z pliku
+    std::string configRecord;
+    // nazwa pliku zapisana w konfiguracji
+    std::string fileName;
+    std::string fileOwner;
+    size_t fileSize;
+
+    // tworzy i otwiera plik do zapisu
+    std::string fullTmpConfigFilePath = workspaceAbsoluteDirPath  + ".tmp" + configFileName;
+    configFile.open(fullTmpConfigFilePath, std::ios::out);
+
+    while (std::getline(infile, configRecord)) {
+
+        std::istringstream iss(configRecord);
+        if (!(iss >> fileName >> fileOwner >> fileSize)) {
+            return FILE_CANNOT_READ;
+        }
+
+        if (fileName != name) {
+            configFile << fileName << "\n";
+        }
+    }
+
+    infile.close();
+    configFile.close();
+
+    // zamienia pliki
+    if (remove(fullConfigFilePath.c_str())) {
+        return FILE_CANNOT_UPDATE_CONFIG;
+    }
+
+    if (rename(fullTmpConfigFilePath.c_str(), fullConfigFilePath.c_str())) {
+        // jak starczy czasu to dodam obsluge tej sytuacji
+        std::cout << "W wyniku bledu, stracono plik konfiguracyjny\n";
+        return FILE_CANNOT_UPDATE_CONFIG;
+    }
+    return FILE_SUCCESS;
+}
+
+FileOperationResult LocalSystemHandler::addToConfig(std::string name, std::string owner, size_t size) {
 
     std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
 
@@ -192,53 +247,9 @@ FileOperationResult LocalSystemHandler::updateConfig(const std::string& name, Co
     std::ofstream configFile;
 
     // dodaje nowy rekord
-    if (action == CONFIG_ADD) {
-        configFile.open(fullConfigFilePath, std::ios::in | std::ios::app);
-        configFile << name << "\n";
+    configFile.open(fullConfigFilePath, std::ios::in | std::ios::app);
+    configFile << name << " " <<  owner << " " << size;
 
-    } else if (action == CONFIG_REMOVE) {
-
-        /*
-         * tworzy plik tymczasowy juz bez usunietego rekordu
-         * nastepnie zastepuje nim konfiguracyjny
-         */
-        // otwiera plik do odczytu
-        std::ifstream infile(fullConfigFilePath);
-        // wiersz z pliku
-        std::string configRecord;
-        // nazwa pliku zapisana w konfiguracji
-        std::string fileName;
-
-        // tworzy i otwiera plik do zapisu
-        std::string fullTmpConfigFilePath = workspaceAbsoluteDirPath  + ".tmp" + configFileName;
-        configFile.open(fullTmpConfigFilePath, std::ios::out);
-
-        while (std::getline(infile, configRecord)) {
-
-            std::istringstream iss(configRecord);
-            if (!(iss >> fileName)) {
-                return FILE_CANNOT_READ;
-            }
-
-            if (fileName != name) {
-                configFile << fileName << "\n";
-            }
-        }
-
-        infile.close();
-        configFile.close();
-
-        // zamienia pliki
-        if (remove(fullConfigFilePath.c_str())) {
-            return FILE_CANNOT_UPDATE_CONFIG;
-        }
-
-        if (rename(fullTmpConfigFilePath.c_str(), fullConfigFilePath.c_str())) {
-            // jak starczy czasu to dodam obsluge tej sytuacji
-            std::cout << "W wyniku bledu, stracono plik konfiguracyjny\n";
-            return FILE_CANNOT_UPDATE_CONFIG;
-        }
-    }
     return FILE_SUCCESS;
 }
 

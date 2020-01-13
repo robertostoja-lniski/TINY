@@ -14,7 +14,6 @@
 #include <sstream>
 #include <fstream>
 
-
 /// @namespace operacje na plikach.
 /// Potrzeba, żeby sprawdzic poprawnosc sciezek do pliku
 namespace filesys = boost::filesystem;
@@ -65,7 +64,7 @@ private:
     std::string workspaceAbsoluteDirPath;
 
     //// sprawdza czy sciezka z systemu plikow jest poprawna
-    bool isFsFilePathCorrect(std::string filepath);
+    bool isFsFilePathCorrect(std::string &filepath);
 
 public:
     /// Konstruktor
@@ -80,13 +79,15 @@ public:
     //// dodaje plik do folderu roboczego
     FileOperationResult addFileToLocalSystem(std::string);
 
-    FileOperationResult updateConfig(const std::string&, ConfigOperation);
+    FileOperationResult addToConfig(std::string name, std::string owner, size_t size);
+
+    FileOperationResult removeFromConfigByName(std::string);
 
     DirOperationResult setDefaultWorkspace();
 
     //// zwraca wektor nazw plikow, ktorych bylismy wlascicielem
     //// przed zamknieciem programu
-    std::vector<std::string> getPreviousState();
+    std::vector<std::tuple<std::string, std::string, size_t>> getPreviousState();
 
     //// zwraca ostatni czlon sciezki w systemie plikow
     std::string getLastTokenOf(const std::string);
