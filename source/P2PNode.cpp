@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include "Logger.h"
 #include <LocalSystemHandler.h>
+#include <ifaddrs.h>
 
 P2PNode::P2PNode(int tcpPort, LocalSystemHandler &handler) : tcpPort(tcpPort), handler(handler) {
 
@@ -70,8 +71,8 @@ ActionResult P2PNode::removeFile(std::string fileName) {
         return ACTION_FAILURE;
     }
 
-    globalFiles.revoke(tmp);
-    globalFiles.addToFilesRevokedByMe(tmp);
+//    globalFiles.revoke(tmp);
+//    globalFiles.addToFilesRevokedByMe(tmp);
 
     if (sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS) {
         uploadFile(fileName);
@@ -338,7 +339,6 @@ ActionResult P2PNode::startBroadcastingFiles() {
                 if (sendto(broadcast.sendSocketFd, (void *) &communicate, size, 0,
                            (struct sockaddr *) &broadcast.sendAddress, sizeof(broadcast.sendAddress), 0.0) < size) {
                     logging::ERROR("Nie udalo sie sendto w broadcascie.");
-
                 }
             }
             std::this_thread::sleep_for(broadcast.interval);
@@ -362,32 +362,72 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             broadcast.exitMutex.unlock();
 
             // trzeba pobrać adres nadawacy i zapisać go gdzies (?)
-            if (recvfrom(broadcast.recvSocketFd, (void *) &communicate, sizeof(communicate), 0, nullptr, 0) < 0) {
+            socklen_t addrlen;
+            if (recvfrom(broadcast.recvSocketFd, (void *) &communicate, sizeof(communicate),
+//                            0, nullptr, 0) < 0 ){
+                         0, (struct sockaddr *) &broadcast.recvAddress, &addrlen) < 0) {
                 logging::ERROR("Blad recive w otrzmywaniu komunikatow\n");
                 continue;
             }
-            logging::TRACE("Odebrałem komunikat: " + communicate.toString());
+            char str[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(broadcast.recvAddress.sin_addr.s_addr), str, INET_ADDRSTRLEN);
+            if(!isRemoteIp(std::string(str))) {
+                continue;
+            }
+
+            logging::TRACE("Odebrałem komunikat: " + communicate.toString() + "Wysylajacy: " + std::string(str));
+
+            P2PRecordPossessor filesPossessor(communicate.userName,std::string(str));
 
             if (communicate.type == UDP_BROADCAST) {
-                FileBroadcastStruct *file = communicate.files;
-                for (int i = 0; i < communicate.filesCount; ++i, ++file) {
-                    // zmienic username na ip
-                    if (globalFiles.add(communicate.userName, File(*file)) == ADD_GLOBAL_REVOKED) {
-                        sendRevokeCommunicate(File(*file));
-                    }
+                for (int i = 0; i < communicate.filesCount; ++i) {
+                    File broadcastFile(communicate.files[i]);
+                    globalFiles.add(filesPossessor, broadcastFile);
                 }
-            } else {
-                //revoke communicate type
-                removeFile(communicate.files[0].name);
-                globalFiles.revoke(File(communicate.files[0]));
-                localFiles.removeFile(File(communicate.files[0]));
-                updateLocalFiles();
+
+                /// do debuga
+                globalFiles.showFiles();
+            } else if(communicate.type == UDP_REVOKE){
+//                //revoke communicate type
+//                removeFile(communicate.files[0].name);
+//                globalFiles.revoke(File(communicate.files[0]));
+//                localFiles.removeFile(File(communicate.files[0]));
+//                updateLocalFiles();
             }
         }
     });
 
     // wątek 'łapany' w destruktorze
     return ACTION_SUCCESS;
+}
+
+bool P2PNode::isRemoteIp(const std::string& testedIp) {
+
+    if(testedIp == "0.0.0.0"){
+        return false;
+    }
+
+    struct ifaddrs *addrs;
+    getifaddrs(&addrs);
+
+    struct ifaddrs *toRemove = addrs;
+
+    while (addrs)
+    {
+        if (addrs->ifa_addr && addrs->ifa_addr->sa_family == AF_INET)
+        {
+            struct sockaddr_in *pAddr = (struct sockaddr_in *)addrs->ifa_addr;
+            if(inet_ntoa(pAddr->sin_addr) == testedIp) {
+                freeifaddrs(toRemove);
+                return false;
+            }
+
+        }
+
+        addrs = addrs->ifa_next;
+    }
+    freeifaddrs(toRemove);
+    return true;
 }
 
 

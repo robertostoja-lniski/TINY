@@ -7,6 +7,7 @@
 
 
 #include <map>
+#include <utility>
 #include "P2PRecord.h"
 
 enum AddGlobalFileResult {
@@ -14,11 +15,33 @@ enum AddGlobalFileResult {
     ADD_GLOBAL_REVOKED = 1,
 };
 
+// dodalem w pliku .h bo to prosta funkcja potem mozna rozbic na .h i .cpp
+class P2PRecordPossessor{
+
+private:
+    std::string name;
+    std::string ip;
+
+public:
+
+    P2PRecordPossessor() = default;
+    P2PRecordPossessor(std::string name, std::string ip) : name(std::move(name)), ip(std::move(ip)){}
+
+    std::string getIp() const { return ip; }
+    std::string getName() const { return name; }
+
+    friend bool operator < (P2PRecordPossessor const &p1, P2PRecordPossessor const &p2)
+    {
+        return p1.name < p2.name;
+    }
+
+};
+
 class P2PFiles {
 
 private:
     /// Mapa rekordów setów plików z kluczem nazw
-    std::map<std::string, P2PRecord> files;
+    std::map<P2PRecordPossessor, P2PRecord> files;
 
     /// mutex synchronizujący mapę files
     std::shared_mutex mutex;
@@ -27,21 +50,17 @@ private:
     /// @synchronized
     std::map<std::string, P2PRecord> getFiles() const;
 
-    /// Set przechowujący informacje o unieważnionych przez lokalny węzeł plikach.
-    /// W przypadku gdy ktoś dalej rozsyła unieważniony plik, komunikat jest ponawiany.
-    std::set<File> filesRevokedByMe;
-
     /// Getter dla rekordu połączonego z danym węzłem
     /// @param nodeName nazwa węzła
     /// na razie niepotrzebny
-    P2PRecord &operator[](std::string);
+    P2PRecord &operator[](P2PRecordPossessor);
 
 public:
     /// Dodaje plik do listy plików unieważnionych przez dany węzeł
     void addToFilesRevokedByMe(File file);
 
     /// Dodaje plik do listy plików danego węzła. Jeśli był unieważniony, zwraca wartość informującą o tym.
-    AddGlobalFileResult add(std::string node, File file);
+    AddGlobalFileResult add(P2PRecordPossessor possessor, File file);
 
     /// Usuwa plik ze wszytskich list
     void revoke(File file);
