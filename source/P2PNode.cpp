@@ -10,6 +10,7 @@
 #include <sstream>
 #include <cstring>
 #include <stdexcept>
+#include <pthread.h>
 
 #include <LocalSystemHandler.h>
 #include <algorithm>
@@ -100,16 +101,18 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
         fileRequest request {};
         strcpy(request.fileName, fileName.c_str());
         request.bytes = toDownloadFromEach;
-        std::vector <std::thread> threads;
+        std::vector <std::future<ActionResult >> results;
         for (auto i = 0; i < possessorsIps.size(); i++){
             request.offset = i * toDownloadFromEach;
             //ktos musi doslac fragment, ktory pozostanie z dzielenia.
             request.bytes += (i == possessorsIps.size() -1 ) ? rest : 0;
-            std::thread t(&P2PNode::performDownloadingFileFragment, this, request, possessorsIps[i]);
-            threads.push_back(std::move(t));
+            std::future<ActionResult> t = std::async(&P2PNode::performDownloadingFileFragment, this, request, possessorsIps[i]);
+            results.push_back(std::move(t));
         }
-        for (auto &t: threads) {
-            t.detach();
+        for (int i = 0; i <= results.size(); i++) {
+            if (results[i].get() == ACTION_FAILURE){
+
+            }
         }
     }
     else {
