@@ -10,10 +10,8 @@
 #include <future>
 #include <netinet/in.h>
 #include "Communicate.h"
+#include "Defines.h"
 
-#define MAX_USERNAME_LEN 40
-#define MAX_FILENAME_LEN 500
-#define MAX_TCP_CONNECTIONS 5
 
 /**
  * @enum
@@ -73,14 +71,12 @@ private:
         int sendSocketFd = -1;
         int recvSocketFd = -1;
         std::mutex preparationMutex, exitMutex;
-        /// @synchronized
         bool exit = false;
         std::thread sendThread, recvThread;
         std::chrono::seconds interval = std::chrono::seconds(5);
-        std::chrono::seconds restartConnectionInterval = std::chrono::seconds(5);
 
         static const int UDP_BROADCAST_PORT = 7654;
-        char *UDP_BROADCAST_IP = "192.168.1.255";
+        char *UDP_BROADCAST_IP = BROADCAST_ADDR;
         struct sockaddr_in sendAddress, recvAddress;
 
 
@@ -89,7 +85,7 @@ private:
     /// Inicjalizuje gniazdo do rozgłaszania
     /// @param restart czy restartujemy połączenie
     /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
-    ActionResult prepareForBroadcast(bool restart = false);
+    ActionResult prepareForBroadcast();
 public:
 
     explicit P2PNode(int, LocalSystemHandler&);
@@ -100,7 +96,7 @@ public:
     ActionResult showGlobalFiles(SHOW_GLOBAL_FILE_TYPE);
 
     // zmienia tablice lokalnych plikow jesli pojawil sie nowy
-    ActionResult updateLocalFiles(void);
+    ActionResult updateLocalFiles();
 
     // rozglasza pliki po zmianie
     ActionResult startBroadcastingFiles();
@@ -112,7 +108,7 @@ public:
     ActionResult downloadFile(const std::string &);
 
     /// Wrzuca plik do lokalnego systemu
-    ActionResult uploadFile(std::string);
+    ActionResult uploadFile(const std::string&);
 
     /// Usuwa plik z lokalnego systemu
     ActionResult removeFile(std::string);

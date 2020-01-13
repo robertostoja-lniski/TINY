@@ -3,26 +3,22 @@
 #include <thread>
 #include "P2PNode.h"
 #include <netinet/in.h>
-#include <cstdlib>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cstdio>
 #include <fcntl.h>
 #include <vector>
 #include <arpa/inet.h>
-#include <sstream>
-#include <cstring>
 #include <stdexcept>
 #include "Logger.h"
 #include <LocalSystemHandler.h>
-#include <algorithm>
 
-P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), handler(handler) {
+P2PNode::P2PNode(int tcpPort, LocalSystemHandler &handler) : tcpPort(tcpPort), handler(handler) {
 
     handler.setDefaultWorkspace();
     std::vector<std::string> filesNamesToReUpload = handler.getPreviousState();
 
-    for(auto fileName : filesNamesToReUpload) {
+    for (auto fileName : filesNamesToReUpload) {
         size_t fileSize = handler.getFileSize(fileName);
         File restoredFile(fileName, handler.getUserName(), fileSize);
         localFiles.addFile(restoredFile);
@@ -32,9 +28,9 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), h
     startReceivingBroadcastingFiles();
 }
 
-ActionResult P2PNode::uploadFile(std::string uploadFileName) {
+ActionResult P2PNode::uploadFile(const std::string &uploadFileName) {
 
-    if(handler.addFileToLocalSystem(uploadFileName) != FILE_SUCCESS){
+    if (handler.addFileToLocalSystem(uploadFileName) != FILE_SUCCESS) {
         return ACTION_FAILURE;
     }
 
@@ -48,7 +44,7 @@ ActionResult P2PNode::uploadFile(std::string uploadFileName) {
         return ACTION_FAILURE;
     }
 
-    if(handler.updateConfig(systemFileName, CONFIG_ADD) != FILE_SUCCESS){
+    if (handler.updateConfig(systemFileName, CONFIG_ADD) != FILE_SUCCESS) {
         return ACTION_FAILURE;
     }
 
@@ -63,7 +59,7 @@ ActionResult P2PNode::showLocalFiles() {
 
 ActionResult P2PNode::removeFile(std::string fileName) {
 
-    if(!handler.isNetworkFilePathCorrect(fileName)) {
+    if (!handler.isNetworkFilePathCorrect(fileName)) {
         return ACTION_FAILURE;
     }
     size_t fileSize = handler.getFileSize(fileName);
@@ -76,12 +72,12 @@ ActionResult P2PNode::removeFile(std::string fileName) {
     globalFiles.revoke(tmp);
     globalFiles.addToFilesRevokedByMe(tmp);
 
-    if(sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS){
+    if (sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS) {
         uploadFile(fileName);
         return ACTION_FAILURE;
     }
 
-    if(handler.removeFileFromLocalSystem(fileName) != FILE_SUCCESS) {
+    if (handler.removeFileFromLocalSystem(fileName) != FILE_SUCCESS) {
         uploadFile(fileName);
         return ACTION_FAILURE;
     }
@@ -103,8 +99,6 @@ ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
 }
 
 ActionResult P2PNode::startBroadcastingFiles() {
-
-
     broadcast.sendThread = std::thread([this]() {
         while (true) {
             // Sprawdzenie warunku czy wychodzimy z petli
@@ -115,18 +109,19 @@ ActionResult P2PNode::startBroadcastingFiles() {
             }
             broadcast.exitMutex.unlock();
 
-            auto communicates = localFiles.getBroadcastCommunicates();
+            auto communicates = localFiles.getBroadcastCommunicates(handler.getUserName());
 
-            for (auto communicate: *communicates) {
-                if (communicate.filesCount != 0) {
-                    // set user name
-                    int structSize = 1024 + sizeof(FileBroadcastStruct) * communicate.filesCount;
-                    logging::TRACE(std::to_string(structSize));
-                    while (sendto(broadcast.sendSocketFd, (void *) &communicate, structSize, 0, (struct sockaddr *)&broadcast.sendAddress, sizeof(broadcast.sendAddress)) < structSize ) {
-                    }
+            for (auto communicate: communicates) {
+                size_t size = sizeof(communicate);
+                logging::TRACE(communicate.toString());
+
+                if (sendto(broadcast.sendSocketFd, (void *) &communicate, size, 0,
+                              (struct sockaddr *) &broadcast.sendAddress, sizeof(broadcast.sendAddress)) < size) {
+                    logging::ERROR("Nie udalo sie sendto w broadcascie.");
+
                 }
             }
-            std::this_thread::sleep_for(broadcast.restartConnectionInterval);
+            std::this_thread::sleep_for(broadcast.interval);
         }
     });
 
@@ -154,15 +149,15 @@ P2PNode::~P2PNode() {
 
 void P2PNode::sendFile(int fileFD, int clientFD, unsigned long long offset, unsigned long long bytes) {
 
-    char buff[4096*1024];
+    char buff[4096 * 1024];
     unsigned long long bytesSent = 0;
 
-    if (lseek(fileFD, offset, SEEK_SET) < 0){
+    if (lseek(fileFD, offset, SEEK_SET) < 0) {
         throw std::runtime_error("lseek failed\n");
     }
 
     while (bytesSent < bytes) {
-        ssize_t bytesToRead = std::min(bytes - bytesSent, (unsigned long long)4096 * 1024);
+        ssize_t bytesToRead = std::min(bytes - bytesSent, (unsigned long long) 4096 * 1024);
         ssize_t bytesRead = read(fileFD, buff, bytesToRead);
         if (bytesRead < 0) {
             throw std::runtime_error("read failed\n");
@@ -200,8 +195,8 @@ void P2PNode::handleDownloadRequests() {
         throw std::runtime_error("Listen failed...\n");
     }
 
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wmissing-noreturn"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (true) {
 
         struct sockaddr_in cli{};
@@ -218,10 +213,10 @@ void P2PNode::handleDownloadRequests() {
             throw std::runtime_error("recv() ERROR");
         }
 
-        #pragma clang diagnostic push
-        #pragma ide diagnostic ignored "OCDFAInspection"
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCDFAInspection"
         auto request = (fileRequest *) buff;
-        #pragma clang diagnostic pop
+#pragma clang diagnostic pop
         std::cout << request->fileName << " " << request->bytes << " " << request->offset << std::endl;
 
         // TODO moze local system handler bedzie ustawial prefix do workspace jako pole Node'a
@@ -229,7 +224,7 @@ void P2PNode::handleDownloadRequests() {
         try {
             fileFD = handler.openFileFromWorkSpace(request->fileName);
         }
-        catch(...){
+        catch (...) {
             printf("Żądano pliku, który nie istnieje.\n");
             close(clientFD);
             continue;
@@ -240,7 +235,7 @@ void P2PNode::handleDownloadRequests() {
         std::thread t1(&P2PNode::sendFile, this, fileFD, clientFD, request->offset, request->bytes);
         t1.detach();
     }
-    #pragma clang diagnostic pop
+#pragma clang diagnostic pop
 }
 
 // wowolujemy metode p2pnode.handleDownlaodRequests na nowym watku
@@ -266,26 +261,26 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
     servaddr.sin_port = htons(tcpPort);
 
     // connect the client socket to server socket
-    if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
+    if (connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) != 0) {
         throw std::runtime_error("connection with the server failed...\n");
     }
 
     // std::cout << sizeof(request);
-    if(write(sockfd, &request, sizeof(request))  < sizeof(request)){
+    if (write(sockfd, &request, sizeof(request)) < sizeof(request)) {
         throw std::runtime_error("write failed\n");
     }
 
     // std::cout << request.fileName << "\n";
     int fd = handler.createAndOpenFileInWorkspace(request.fileName);
 
-    if(lseek(fd, request.offset, SEEK_SET) < request.offset){
+    if (lseek(fd, request.offset, SEEK_SET) < request.offset) {
         throw std::runtime_error("lseek failed\n");
     }
     // 4 MB
-    char buff[4096*1024];
+    char buff[4096 * 1024];
     unsigned long long bytesReceived = 0;
     while (bytesReceived < request.bytes) {
-        ssize_t bytesToRead = std::min(request.bytes - bytesReceived, (unsigned long long)4096 * 1024);
+        ssize_t bytesToRead = std::min(request.bytes - bytesReceived, (unsigned long long) 4096 * 1024);
         // tutaj jest mały problem, poniewaz jezeli nadawca nic nie wysyla (blad lub znika z sieci) to czekamy bez konca
         ssize_t bytesRead = read(sockfd, buff, bytesToRead);
         if (bytesRead < 0) {
@@ -299,15 +294,8 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
     }
 }
 
-ActionResult P2PNode::prepareForBroadcast(bool restart) {
+ActionResult P2PNode::prepareForBroadcast() {
     std::unique_lock<std::mutex> lk(broadcast.preparationMutex);
-
-    if (restart) {
-        close(broadcast.sendSocketFd);
-        close(broadcast.recvSocketFd);
-        broadcast.recvSocketFd = -1;
-        broadcast.sendSocketFd = -1;
-    }
 
     int sendFd = broadcast.sendSocketFd;
     int recvFd = broadcast.recvSocketFd;
@@ -354,12 +342,12 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
 
 
     ActionResult actionResult = socketHandler(sendFd, broadcast.sendAddress);
-    if(actionResult != ACTION_SUCCESS){
+    if (actionResult != ACTION_SUCCESS) {
         return actionResult;
     }
 
     actionResult = socketHandler(recvFd, broadcast.recvAddress);
-    if(actionResult != ACTION_SUCCESS){
+    if (actionResult != ACTION_SUCCESS) {
         close(sendFd);
         return actionResult;
     }
@@ -371,7 +359,8 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
 }
 
 ActionResult P2PNode::sendRevokeCommunicate(File file) {
-    Communicate communicate(FileBroadcastStruct(file.getName(), file.getOwner(), file.getSize()), handler.getUserName());
+    Communicate communicate(FileBroadcastStruct(file.getName(), file.getOwner(), file.getSize()),
+                            handler.getUserName());
 
     if (send(broadcast.sendSocketFd, (void *) &communicate, (int) sizeof(communicate), 0) < (int) sizeof(communicate)) {
         return ACTION_FAILURE;
@@ -401,12 +390,11 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
                         sendRevokeCommunicate(File(*file));
                     }
                 }
-            }
-            else {
+            } else {
                 //revoke communicate type
-                removeFile(communicate->revokedFile.name);
-                globalFiles.revoke(File(communicate->revokedFile));
-                localFiles.removeFile(File(communicate->revokedFile));
+                removeFile(communicate->files[0].name);
+                globalFiles.revoke(File(communicate->files[0]));
+                localFiles.removeFile(File(communicate->files[0]));
                 updateLocalFiles();
             }
         }

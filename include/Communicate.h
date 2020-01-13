@@ -10,6 +10,7 @@
 #include <vector>
 #include <cstring>
 #include "FileBroadcastStruct.h"
+#include "Defines.h"
 
 
 /// @enum Typ komunikatu UDP. Pierwszy bajt komunikatu.
@@ -19,18 +20,25 @@ enum UDPCommunicateType {
 };
 
 struct Communicate {
-    const size_t filesCount;
+    char s[8] = "AAAAAAA";
     UDPCommunicateType type;
-    char userName[64];
-    FileBroadcastStruct revokedFile;
-    static const int MAX_FILES_IN_COM = 64;
+    char s2[8] = "AAAAAAA";
+    size_t filesCount;
+    char s3[8] = "AAAAAAA";
+
+    char userName[MAX_USERNAME_LEN];
+    char s4[8] = "AAAAAAA";
     FileBroadcastStruct files[MAX_FILES_IN_COM];
+    char s5[8] = "AAAAAAA";
 
+    explicit Communicate(size_t filesCount_, std::string userName_);
+    Communicate(FileBroadcastStruct revokedFile, const std::string& userName);
 
-    explicit Communicate(std::string userName_, UDPCommunicateType type_ = UDP_BROADCAST);
-    Communicate(UDPCommunicateType type_);
-    Communicate(int filesCount_ = MAX_FILES_IN_COM);
-    Communicate(FileBroadcastStruct revokedFile_, std::string userName);
+    Communicate();
+
+    std::string toString();
+
+    void clearMemory();
 };
 
 

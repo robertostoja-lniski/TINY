@@ -1,10 +1,8 @@
 #include <P2PRecord.h>
-#include <P2PNode.h>
 #include <vector>
 #include <FileBroadcastStruct.h>
-#include <memory>
 
-AddFileResult P2PRecord::addFile(File file) {
+AddFileResult P2PRecord::addFile(const File& file) {
 
     mutex.lock_shared();
 
@@ -36,7 +34,7 @@ void P2PRecord::print() {
     }
 }
 
-RecordOperationResult P2PRecord::removeFile(File file) {
+RecordOperationResult P2PRecord::removeFile(const File& file) {
 
     mutex.lock_shared();
 
@@ -56,25 +54,32 @@ RecordOperationResult P2PRecord::removeFile(File file) {
     return SUCCESS;
 }
 
-std::unique_ptr<std::vector<Communicate>> P2PRecord::getBroadcastCommunicates() {
-    auto N = Communicate::MAX_FILES_IN_COM;
+std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& owner) {
+    // maksymalnie MAX_FILES_IN_COM plikow w komunikacie, wiec musimy wyslac kilka komunikatow
     std::shared_lock<std::shared_mutex> lk(this->mutex);
 
-    int fullCommunicatesCount = (int) fileSet.size() / N;
-    const int lastCommunicateSize = (int) fileSet.size() % N;
-    auto communicates = std::make_unique<std::vector<Communicate>>(fullCommunicatesCount, Communicate());
-    communicates->push_back(Communicate(lastCommunicateSize));
+    std::vector<Communicate> communicates;
 
-    auto record_it = fileSet.begin();
-    for(auto communicate : *communicates) {
-        FileBroadcastStruct *file = communicate.files;
-        auto filesCount = communicate.filesCount;
-
-        for (auto i = 0; i < filesCount; ++i, ++file, ++record_it) {
-            auto const& f = *record_it;
-            file->setValues(f.getName(), f.getOwner(), f.getSize());
-        }
+    // kopiujemy set na wektor zeby bylo nam latwiej
+    std::vector<File> files;
+    for (const auto& file:fileSet) {
+        files.push_back(file);
     }
+
+    size_t filesLeftToAdd = files.size();
+    size_t fileID = 0;
+    while(filesLeftToAdd > 0){
+        size_t filesToAdd = std::min(filesLeftToAdd, (size_t)MAX_FILES_IN_COM);
+        auto communicate = Communicate(filesToAdd, owner);
+
+        for (int i = 0; i < filesToAdd; i++) {
+            communicate.files[fileID].setValues(files[fileID].getName(), files[fileID].getOwner(),
+                                                files[fileID].getSize());
+        }
+        communicates.push_back(communicate);
+        filesLeftToAdd -= filesToAdd;
+    }
+
     return communicates;
 
 }
