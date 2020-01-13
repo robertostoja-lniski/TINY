@@ -50,6 +50,11 @@ private:
 
     /// Pliki lokalne.
     P2PRecord localFiles;
+    /// Lokalna lista plkow uniewaznionych
+    P2PRecord filesRevokedByMe;
+
+    /// Set przechowujący informacje o unieważnionych przez lokalny węzeł plikach.
+    /// W przypadku gdy ktoś dalej rozsyła unieważniony plik, komunikat jest ponawiany.
 
     LocalSystemHandler& handler;
     /// Port, na ktorym sluchamy na zadania transferu plikow
@@ -79,13 +84,14 @@ private:
         const char *UDP_BROADCAST_IP = BROADCAST_ADDR;
         struct sockaddr_in sendAddress, recvAddress;
 
-
     } broadcast;
 
     /// Inicjalizuje gniazdo do rozgłaszania
     void prepareForSendingBroadcast();
 
     void prepareForReceivingBroadcast();
+
+    bool isRemoteIp(const std::string&);
 public:
 
     explicit P2PNode(int, LocalSystemHandler&);

@@ -4,22 +4,16 @@
 
 #include "P2PFiles.h"
 
-P2PRecord &P2PFiles::operator[](std::string nodeName) {
+P2PRecord &P2PFiles::operator[](P2PRecordPossessor possessor) {
     std::shared_lock<std::shared_mutex> lk(mutex);
-    return files[nodeName];
+    return files[possessor];
 }
 
-AddGlobalFileResult P2PFiles::add(std::string node, File file) {
+AddGlobalFileResult P2PFiles::add(P2PRecordPossessor possessor, File file) {
     std::unique_lock<std::shared_mutex> lk(mutex);
 
-    auto it = filesRevokedByMe.find(file);
-    if (it == filesRevokedByMe.end()) {
-        // jeśli nie ma pliku na liście unieważnionych, to dodaj plik
-        files[node].addFile(std::move(file));
-        return ADD_GLOBAL_SUCCESS;
-    }
-    // jeśli plik jest na liście unieważnionych, to ponów komunikat o unieważnieniu
-    return ADD_GLOBAL_REVOKED;
+    files[possessor].addFile(std::move(file));
+    return ADD_GLOBAL_SUCCESS;
 }
 
 void P2PFiles::revoke(File file) {
@@ -32,17 +26,11 @@ void P2PFiles::revoke(File file) {
 
 }
 
-void P2PFiles::addToFilesRevokedByMe(File file) {
-    std::unique_lock<std::shared_mutex> lk(mutex);
-
-    filesRevokedByMe.insert(file);
-}
-
 void P2PFiles::showFiles() {
     std::shared_lock<std::shared_mutex> lk(mutex);
 
-    for(auto &record: files){
-        std::cout << record.first << ": " << std::endl;
+    for(auto &record : files){
+        std::cout << record.first.getName() << " (" + record.first.getIp() + ")" << ": " << std::endl;
         record.second.print();
     }
 }
