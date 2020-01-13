@@ -34,13 +34,13 @@ public:
     void setOwner(const std::string owner);
 
     /// Getter dla właściciela
-    const std::string getOwner() const;
+    [[nodiscard]] std::string getOwner() const;
 
     /// Getter dla nazwy
-    const std::string getName() const;
+    [[nodiscard]] std::string getName() const;
 
     ///Getter dla rozmiaru
-    const std::size_t getSize() const;
+    [[nodiscard]] std::size_t getSize() const;
 
     /**
      * Operator porównania.

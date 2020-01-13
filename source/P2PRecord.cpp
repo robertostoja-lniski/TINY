@@ -72,8 +72,7 @@ std::unique_ptr<std::vector<Communicate>> P2PRecord::getBroadcastCommunicates() 
 
         for (auto i = 0; i < filesCount; ++i, ++file, ++record_it) {
             auto const& f = *record_it;
-            auto tmp = FileBroadcastStruct(f.getName(), f.getOwner(), f.getSize());
-            memcpy((void *)file, (void *)&tmp, sizeof(tmp));
+            file->setValues(f.getName(), f.getOwner(), f.getSize());
         }
     }
     return communicates;

@@ -81,6 +81,7 @@ private:
 
         static const int UDP_BROADCAST_PORT = 7654;
         char *UDP_BROADCAST_IP = "192.168.1.255";
+        struct sockaddr_in sendAddress, recvAddress;
 
 
     } broadcast;

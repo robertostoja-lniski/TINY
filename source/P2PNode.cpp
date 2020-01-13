@@ -125,8 +125,9 @@ ActionResult P2PNode::startBroadcastingFiles() {
 
             for (auto communicate: *communicates) {
                 if (communicate.filesCount != 0) {
-                    int structSize = (int) sizeof(communicate);
-                    while (send(broadcast.sendSocketFd, &communicate, structSize, 0) < structSize ) {
+                    // set user name
+                    int structSize = 1024 + sizeof(FileBroadcastStruct) * communicate.filesCount;
+                    while (sendto(broadcast.sendSocketFd, (void *) &communicate, structSize, 0, (struct sockaddr *)&broadcast.sendAddress, sizeof(broadcast.sendAddress)) < structSize ) {
                         if (++failuresCount > 10) {
                             while (prepareForBroadcast(true) != ACTION_SUCCESS) {
                                 // Sprawdzenie warunku czy wychodzimy z petli
@@ -349,38 +350,36 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
             return ACTION_FAILURE;
         }
 
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
-            std::cout << "Reuse not allowed";
-            close(fd);
-            return ACTION_FAILURE;
-        }
+//        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
+//            std::cout << "Reuse not allowed";
+//            close(fd);
+//            return ACTION_FAILURE;
+//        }
 
-        // Bind adres do gniazda
-        if (bind(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
-            close(fd);
-            std::cout << "Nie udalo sie przypisac adresu do gniazda. Numer bledu: " << errno << std::endl;
-            return ACTION_FAILURE;
-        }
+//        // Connect adres do gniazda
+//        if (connect(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
+//            close(fd);
+//            std::cout << "Nie udalo sie przypisac adresu do gniazda. Numer bledu: " << errno << std::endl;
+//            return ACTION_FAILURE;
+//        }
         return ACTION_SUCCESS;
     };
 
-    struct sockaddr_in sendAddress;
-    sendAddress.sin_family = AF_INET;
-    sendAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
-    sendAddress.sin_addr.s_addr = inet_addr(broadcast.UDP_BROADCAST_IP);
+    broadcast.sendAddress.sin_family = AF_INET;
+    broadcast.sendAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+    broadcast.sendAddress.sin_addr.s_addr = inet_addr(broadcast.UDP_BROADCAST_IP);
 
-    struct sockaddr_in recvAddress;
-    recvAddress.sin_family = AF_INET;
-    recvAddress.sin_addr.s_addr = INADDR_ANY;
-    recvAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+    broadcast.recvAddress.sin_family = AF_INET;
+    broadcast.recvAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+    broadcast.recvAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
 
 
-    ActionResult actionResult = socketHandler(sendFd, sendAddress);
+    ActionResult actionResult = socketHandler(sendFd, broadcast.sendAddress);
     if(actionResult != ACTION_SUCCESS){
         return actionResult;
     }
 
-    actionResult = socketHandler(recvFd, recvAddress);
+    actionResult = socketHandler(recvFd, broadcast.recvAddress);
     if(actionResult != ACTION_SUCCESS){
         close(sendFd);
         return actionResult;

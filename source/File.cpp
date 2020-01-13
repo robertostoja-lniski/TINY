@@ -12,15 +12,15 @@ File::File(const std::string name, const std::string owner, const size_t size) :
 
 }
 
-const std::string File::getName() const {
+std::string File::getName() const {
     return name;
 }
 
-const std::string File::getOwner() const {
+std::string File::getOwner() const {
     return owner;
 }
 
-const std::size_t File::getSize() const {
+std::size_t File::getSize() const {
     return size;
 }
 
