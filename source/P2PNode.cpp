@@ -16,11 +16,11 @@
 P2PNode::P2PNode(int tcpPort, LocalSystemHandler &handler) : tcpPort(tcpPort), handler(handler) {
 
     handler.setDefaultWorkspace();
-    std::vector<std::string> filesNamesToReUpload = handler.getPreviousState();
+    auto files = handler.getPreviousState();
 
-    for (auto fileName : filesNamesToReUpload) {
-        size_t fileSize = handler.getFileSize(fileName);
-        File restoredFile(fileName, handler.getUserName(), fileSize);
+    for (auto [name, owner, size] : files) {
+
+        File restoredFile(name, owner, size);
         localFiles.addFile(restoredFile);
     }
     prepareForSendingBroadcast();
@@ -45,7 +45,7 @@ ActionResult P2PNode::uploadFile(const std::string &uploadFileName) {
         return ACTION_FAILURE;
     }
 
-    if (handler.updateConfig(systemFileName, CONFIG_ADD) != FILE_SUCCESS) {
+    if (handler.addToConfig(file.getName(), file.getOwner(), file.getSize()) != FILE_SUCCESS) {
         return ACTION_FAILURE;
     }
 
