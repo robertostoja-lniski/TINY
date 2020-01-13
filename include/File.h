@@ -23,15 +23,8 @@ private:
     std::string owner;
     size_t size;
 public:
-    File(const std::string name, const std::string owner, const size_t size);
+    File(const std::string& name, const std::string& owner, size_t size);
     explicit File(FileBroadcastStruct &fileBroadcastStruct);
-
-
-    /// Setter dla nazwy
-    void setName(const std::string name);
-
-    /// Setter dla właściciela
-    void setOwner(const std::string owner);
 
     /// Getter dla właściciela
     [[nodiscard]] std::string getOwner() const;
