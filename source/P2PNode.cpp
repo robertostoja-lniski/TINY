@@ -13,7 +13,7 @@
 #include <sstream>
 #include <cstring>
 #include <stdexcept>
-
+#include "Logger.h"
 #include <LocalSystemHandler.h>
 #include <algorithm>
 
@@ -27,7 +27,7 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler& handler) : tcpPort(tcpPort), h
         File restoredFile(fileName, handler.getUserName(), fileSize);
         localFiles.addFile(restoredFile);
     }
-
+    prepareForBroadcast();
     startBroadcastingFiles();
     startReceivingBroadcastingFiles();
 }
@@ -103,15 +103,9 @@ ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
 }
 
 ActionResult P2PNode::startBroadcastingFiles() {
-    // Przygotuj się na broadcast
-    ActionResult actionResult;
-    if ((actionResult = prepareForBroadcast()) != ACTION_SUCCESS) {
-        // jeśli niepowodzenie, zwróć rezultat
-        return actionResult;
-    }
+
 
     broadcast.sendThread = std::thread([this]() {
-        int failuresCount = 0;
         while (true) {
             // Sprawdzenie warunku czy wychodzimy z petli
             broadcast.exitMutex.lock();
@@ -127,25 +121,12 @@ ActionResult P2PNode::startBroadcastingFiles() {
                 if (communicate.filesCount != 0) {
                     // set user name
                     int structSize = 1024 + sizeof(FileBroadcastStruct) * communicate.filesCount;
+                    logging::TRACE(std::to_string(structSize));
                     while (sendto(broadcast.sendSocketFd, (void *) &communicate, structSize, 0, (struct sockaddr *)&broadcast.sendAddress, sizeof(broadcast.sendAddress)) < structSize ) {
-                        if (++failuresCount > 10) {
-                            while (prepareForBroadcast(true) != ACTION_SUCCESS) {
-                                // Sprawdzenie warunku czy wychodzimy z petli
-                                broadcast.exitMutex.lock();
-                                if (broadcast.exit) {
-                                    broadcast.exitMutex.unlock();
-                                    break;
-                                }
-                                broadcast.exitMutex.unlock();
-
-                                std::this_thread::sleep_for(std::chrono::seconds(broadcast.restartConnectionInterval));
-                            }
-                            failuresCount = 0;
-                            break;
-                        }
                     }
                 }
             }
+            std::this_thread::sleep_for(broadcast.restartConnectionInterval);
         }
     });
 
@@ -193,10 +174,8 @@ void P2PNode::sendFile(int fileFD, int clientFD, unsigned long long offset, unsi
         }
 
     }
-
     close(clientFD);
     close(fileFD);
-
 }
 
 void P2PNode::handleDownloadRequests() {
@@ -392,13 +371,6 @@ ActionResult P2PNode::prepareForBroadcast(bool restart) {
 }
 
 ActionResult P2PNode::sendRevokeCommunicate(File file) {
-    // Przygotuj się na broadcast
-    ActionResult actionResult;
-    if ((actionResult = prepareForBroadcast()) != ACTION_SUCCESS) {
-        // jeśli niepowodzenie, zwróć rezultat
-        return actionResult;
-    }
-
     Communicate communicate(FileBroadcastStruct(file.getName(), file.getOwner(), file.getSize()), handler.getUserName());
 
     if (send(broadcast.sendSocketFd, (void *) &communicate, (int) sizeof(communicate), 0) < (int) sizeof(communicate)) {
@@ -408,13 +380,6 @@ ActionResult P2PNode::sendRevokeCommunicate(File file) {
 }
 
 ActionResult P2PNode::startReceivingBroadcastingFiles() {
-    // Przygotuj się na broadcast
-    ActionResult actionResult;
-    if ((actionResult = prepareForBroadcast()) != ACTION_SUCCESS) {
-        // jeśli niepowodzenie, zwróć rezultat
-        return actionResult;
-    }
-
     broadcast.recvThread = std::thread([this]() {
         auto communicate = std::make_unique<Communicate>();
         while (true) {

@@ -1,7 +1,7 @@
 
 #include <File.h>
 
-File::File(const std::string name, const std::string owner, const size_t size) : name(name), owner(owner), size(size){
+File::File(const std::string& name, const std::string& owner, const size_t size) : name(name), owner(owner), size(size){
     // Długość nazwy i właściciela pliku nie może być większa niż 128 bajtów
     if (name.length() > 128) {
         this->name = name.substr(0, 128);
@@ -22,14 +22,6 @@ std::string File::getOwner() const {
 
 std::size_t File::getSize() const {
     return size;
-}
-
-void File::setOwner(const std::string owner) {
-    this->owner = owner;
-}
-
-void File::setName(const std::string name) {
-    this->name = name;
 }
 
 File::File(FileBroadcastStruct &fileBroadcastStruct) {
