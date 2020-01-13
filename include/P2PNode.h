@@ -11,7 +11,7 @@
 #include <netinet/in.h>
 #include "Communicate.h"
 #include "Defines.h"
-
+#include "PackageLosingApi.h"
 
 /**
  * @enum
