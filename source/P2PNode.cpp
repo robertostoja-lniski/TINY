@@ -87,17 +87,15 @@ ActionResult P2PNode::removeFile(std::string fileName) {
 }
 
 ActionResult P2PNode::downloadFile(const std::string &fileName) {
-    //size_t fileSize = globalFiles.getFileSize(fileName);
-    size_t fileSize = 100;
+
+    size_t fileSize = globalFiles.getFileSize(fileName);
     if (fileSize == -1){
         return ACTION_FAILURE;
     }
-    size_t toDownloadFromEach;
-    //std::vector<std::string> possessorsIps = globalFiles.getFilePossessors(fileName);
-    std::vector<std::string> possessorsIps = {"192.168.0.38"};
-    if (fileSize){
+    std::vector<std::string> possessorsIps = globalFiles.getFilePossessors(fileName);
+    if (!possessorsIps.empty()){
         //pobranie ilosci bajtow do pobrania od kazdego wysylajacego
-        toDownloadFromEach = fileSize/possessorsIps.size();
+        size_t toDownloadFromEach = fileSize/possessorsIps.size();
         size_t rest = fileSize%possessorsIps.size();
         fileRequest request {};
         strcpy(request.fileName, fileName.c_str());
@@ -120,7 +118,10 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
             while (result == ACTION_FAILURE) {
                 sleep(5);
                 possessorsIps = globalFiles.getFilePossessors(fileName);
-
+                //jezeli okaze sie ze nikt nie ma pliku to zwracamy failure.
+                if (possessorsIps.empty()){
+                    return ACTION_FAILURE;
+                }
                 //iterujemy po posiadaczach pliku i jezeli uda nam sie pobrac od kogos to breakujemy petle.
                 for (auto possessor : possessorsIps){
                     request.offset = i * toDownloadFromEach;
@@ -135,7 +136,8 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
         }
     }
     else {
-        throw std::runtime_error("Nikt nie ma wskazanego pliku \n");
+        //nikt nie ma wskazanego pliku
+        return ACTION_FAILURE;
     }
     return ACTION_SUCCESS;
 }
