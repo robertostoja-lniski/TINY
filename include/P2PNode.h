@@ -75,17 +75,17 @@ private:
         std::thread sendThread, recvThread;
         std::chrono::seconds interval = std::chrono::seconds(5);
 
-        static const int UDP_BROADCAST_PORT = 7654;
-        char *UDP_BROADCAST_IP = BROADCAST_ADDR;
+        const int UDP_BROADCAST_PORT = 7654;
+        const char *UDP_BROADCAST_IP = BROADCAST_ADDR;
         struct sockaddr_in sendAddress, recvAddress;
 
 
     } broadcast;
 
     /// Inicjalizuje gniazdo do rozgłaszania
-    /// @param restart czy restartujemy połączenie
-    /// @synchronized tylko jeden wątek może przygotowywać się na broadcast
-    ActionResult prepareForBroadcast();
+    void prepareForSendingBroadcast();
+
+    void prepareForReceivingBroadcast();
 public:
 
     explicit P2PNode(int, LocalSystemHandler&);

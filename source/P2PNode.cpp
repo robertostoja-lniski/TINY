@@ -23,7 +23,8 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler &handler) : tcpPort(tcpPort), h
         File restoredFile(fileName, handler.getUserName(), fileSize);
         localFiles.addFile(restoredFile);
     }
-    prepareForBroadcast();
+    prepareForSendingBroadcast();
+    prepareForReceivingBroadcast();
     startBroadcastingFiles();
     startReceivingBroadcastingFiles();
 }
@@ -98,36 +99,6 @@ ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::startBroadcastingFiles() {
-    broadcast.sendThread = std::thread([this]() {
-        while (true) {
-            // Sprawdzenie warunku czy wychodzimy z petli
-            broadcast.exitMutex.lock();
-            if (broadcast.exit) {
-                broadcast.exitMutex.unlock();
-                break;
-            }
-            broadcast.exitMutex.unlock();
-
-            auto communicates = localFiles.getBroadcastCommunicates(handler.getUserName());
-
-            for (auto communicate: communicates) {
-                size_t size = sizeof(communicate);
-                logging::TRACE(communicate.toString());
-
-                if (sendto(broadcast.sendSocketFd, (void *) &communicate, size, 0,
-                              (struct sockaddr *) &broadcast.sendAddress, sizeof(broadcast.sendAddress)) < size) {
-                    logging::ERROR("Nie udalo sie sendto w broadcascie.");
-
-                }
-            }
-            std::this_thread::sleep_for(broadcast.interval);
-        }
-    });
-
-    // wątek 'łapany' w destruktorze
-    return ACTION_SUCCESS;
-}
 
 P2PNode::~P2PNode() {
     //OBSLUGA BROADCASTU
@@ -294,68 +265,46 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
     }
 }
 
-ActionResult P2PNode::prepareForBroadcast() {
-    std::unique_lock<std::mutex> lk(broadcast.preparationMutex);
-
-    int sendFd = broadcast.sendSocketFd;
-    int recvFd = broadcast.recvSocketFd;
-    if (sendFd >= 0 && recvFd >= 0) {
-        return ACTION_SUCCESS;
-    }
-
-    auto socketHandler = [this](int &fd, struct sockaddr_in &address) {
-        // Otwórz gniazdo
-        if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-            std::cout << "Nie udalo sie otworzyc gniazda. Numer bledu: " << errno << std::endl;
-            return ACTION_FAILURE;
-        }
-
-        int sockoptVar = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
-            std::cout << "Broadcast not allowed";
-            close(fd);
-            return ACTION_FAILURE;
-        }
-
-//        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
-//            std::cout << "Reuse not allowed";
-//            close(fd);
-//            return ACTION_FAILURE;
-//        }
-
-//        // Connect adres do gniazda
-//        if (connect(fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
-//            close(fd);
-//            std::cout << "Nie udalo sie przypisac adresu do gniazda. Numer bledu: " << errno << std::endl;
-//            return ACTION_FAILURE;
-//        }
-        return ACTION_SUCCESS;
-    };
-
-    broadcast.sendAddress.sin_family = AF_INET;
-    broadcast.sendAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
-    broadcast.sendAddress.sin_addr.s_addr = inet_addr(broadcast.UDP_BROADCAST_IP);
-
+void P2PNode::prepareForReceivingBroadcast() {
+    int recvFd;
     broadcast.recvAddress.sin_family = AF_INET;
     broadcast.recvAddress.sin_addr.s_addr = htonl(INADDR_ANY);
     broadcast.recvAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
 
-
-    ActionResult actionResult = socketHandler(sendFd, broadcast.sendAddress);
-    if (actionResult != ACTION_SUCCESS) {
-        return actionResult;
+    if ((recvFd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+        throw std::runtime_error("Nie udalo sie otworzyc gniazda. Numer bledu: " + std::to_string(errno));
     }
 
-    actionResult = socketHandler(recvFd, broadcast.recvAddress);
-    if (actionResult != ACTION_SUCCESS) {
+    if (bind(recvFd, (struct sockaddr *) &broadcast.recvAddress, sizeof(broadcast.recvAddress)) < 0) {
+        throw std::runtime_error("Nie udalo bind w odbieraniu. Errno: " + std::to_string(errno));
+    }
+
+    this->broadcast.recvSocketFd = recvFd;
+}
+
+void P2PNode::prepareForSendingBroadcast() {
+    int sendFd;
+
+    broadcast.sendAddress.sin_family = AF_INET;
+    broadcast.sendAddress.sin_addr.s_addr = inet_addr(broadcast.UDP_BROADCAST_IP);
+    broadcast.sendAddress.sin_port = htons(broadcast.UDP_BROADCAST_PORT);
+
+
+    if ((sendFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        throw std::runtime_error("Nie udalo sie otworzyc gniazda. Numer bledu: " + std::to_string(errno));
+    }
+
+//    if (bind(sendFd, (struct sockaddr *) &broadcast.sendAddress, sizeof(broadcast.sendAddress)) < 0) {
+//        throw std::runtime_error("Nie udalo bind w przygotowanie na wysylanie. Errno: " + std::to_string(errno));
+//    }
+
+    int sockoptVar = 1;
+    if (setsockopt(sendFd, SOL_SOCKET, SO_BROADCAST, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
         close(sendFd);
-        return actionResult;
+        throw std::runtime_error("Nie udalo sie setsockopt" + std::to_string(errno));
     }
 
     this->broadcast.sendSocketFd = sendFd;
-    this->broadcast.recvSocketFd = recvFd;
-
-    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::sendRevokeCommunicate(File file) {
@@ -368,9 +317,9 @@ ActionResult P2PNode::sendRevokeCommunicate(File file) {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::startReceivingBroadcastingFiles() {
-    broadcast.recvThread = std::thread([this]() {
-        auto communicate = std::make_unique<Communicate>();
+
+ActionResult P2PNode::startBroadcastingFiles() {
+    broadcast.sendThread = std::thread([this]() {
         while (true) {
             // Sprawdzenie warunku czy wychodzimy z petli
             broadcast.exitMutex.lock();
@@ -380,21 +329,58 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             }
             broadcast.exitMutex.unlock();
 
-            if (recv(broadcast.recvSocketFd, (void *) communicate.get(), 1024 * 64, 0) < 0) {
+            auto communicates = localFiles.getBroadcastCommunicates(handler.getUserName());
+
+            for (auto communicate: communicates) {
+                size_t size = sizeof(communicate);
+                logging::TRACE("Wysyłam komunikat: " + communicate.toString());
+
+                if (sendto(broadcast.sendSocketFd, (void *) &communicate, size, 0,
+                           (struct sockaddr *) &broadcast.sendAddress, sizeof(broadcast.sendAddress)) < size) {
+                    logging::ERROR("Nie udalo sie sendto w broadcascie.");
+
+                }
+            }
+            std::this_thread::sleep_for(broadcast.interval);
+        }
+    });
+
+    // wątek 'łapany' w destruktorze
+    return ACTION_SUCCESS;
+}
+
+ActionResult P2PNode::startReceivingBroadcastingFiles() {
+    broadcast.recvThread = std::thread([this]() {
+        Communicate communicate;
+        while (true) {
+            // Sprawdzenie warunku czy wychodzimy z petli
+            broadcast.exitMutex.lock();
+            if (broadcast.exit) {
+                broadcast.exitMutex.unlock();
+                break;
+            }
+            broadcast.exitMutex.unlock();
+
+            // trzeba pobrać adres nadawacy i zapisać go gdzies (?)
+            if (recvfrom(broadcast.recvSocketFd, (void *) &communicate, sizeof(communicate), 0, nullptr, 0) < 0) {
+                logging::ERROR("Blad recive w otrzmywaniu komunikatow\n");
                 continue;
             }
-            if (communicate->type == UDP_BROADCAST) {
-                FileBroadcastStruct *file = communicate->files;
-                for (int i = 0; i < communicate->filesCount; ++i, ++file) {
-                    if (globalFiles.add(communicate->userName, File(*file)) == ADD_GLOBAL_REVOKED) {
+            logging::TRACE("Odebrałem komunikat: " + communicate.toString());
+
+            if (communicate.type == UDP_BROADCAST) {
+                FileBroadcastStruct *file = communicate.files;
+                for (int i = 0; i < communicate.filesCount; ++i, ++file) {
+                    // zmienic username na ip
+                    if (globalFiles.add(communicate.userName, File(*file)) == ADD_GLOBAL_REVOKED) {
                         sendRevokeCommunicate(File(*file));
                     }
                 }
             } else {
                 //revoke communicate type
-                removeFile(communicate->files[0].name);
-                globalFiles.revoke(File(communicate->files[0]));
-                localFiles.removeFile(File(communicate->files[0]));
+                removeFile(communicate.files[0].name);
+                globalFiles.revoke(File(communicate.files[0]));
+                localFiles.removeFile(File(communicate.files[0]));
                 updateLocalFiles();
             }
         }

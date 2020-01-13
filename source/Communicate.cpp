@@ -27,9 +27,9 @@ Communicate::Communicate(size_t filesCount_, std::string userName_)
 
 std::string Communicate::toString() {
     std::string result;
-    result += "Wysylam komunikat o rozmniarze:";
-    result += std::to_string(sizeof(*this)) + "\n";
-    result += "Pliki: ";
+    result += "Rozmiar komunikatu: ";
+    result += std::to_string(sizeof(*this));
+    result += " Pliki w komunikacie: ";
 
     for (int i = 0 ; i < filesCount; i++){
         result += std::string(files[i].name) + " ";
