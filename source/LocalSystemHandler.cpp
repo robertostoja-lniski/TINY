@@ -248,7 +248,7 @@ FileOperationResult LocalSystemHandler::addToConfig(std::string name, std::strin
 
     // dodaje nowy rekord
     configFile.open(fullConfigFilePath, std::ios::in | std::ios::app);
-    configFile << name << " " <<  owner << " " << size;
+    configFile << name << " " <<  owner << " " << size << std::endl;
 
     return FILE_SUCCESS;
 }
