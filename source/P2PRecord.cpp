@@ -84,3 +84,7 @@ std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& 
 
 }
 
+const std::set<File> &P2PRecord::getFileSet() const {
+    return fileSet;
+}
+

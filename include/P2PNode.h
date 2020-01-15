@@ -5,7 +5,7 @@
 #include <thread>
 #include <mutex>
 #include "P2PRecord.h"
-#include "P2PFiles.h"
+#include "GlobalFiles.h"
 #include "LocalSystemHandler.h"
 #include <future>
 #include <netinet/in.h>
@@ -46,7 +46,7 @@ class P2PNode {
 
 private:
     /// Pliki globalne całego systemu, których nazwy są pobierane przez UDP.
-    P2PFiles globalFiles;
+    GlobalFiles globalFiles;
 
     /// Pliki lokalne.
     P2PRecord localFiles;
@@ -131,6 +131,8 @@ public:
     virtual ~P2PNode();
 
     void requestAndDownloadFileFragment(fileRequest request, std::string ip_addr);
+
+    ActionResult performDownloadingFileFragment(fileRequest request, std::string ip_addr);
 };
 
 #endif //TINY_P2PNODE_H
