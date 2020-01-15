@@ -2,8 +2,8 @@
 // Created by robert on 15.11.2019.
 //
 
-#ifndef TINY_P2PFILES_H
-#define TINY_P2PFILES_H
+#ifndef TINY_GLOBALFILES_H
+#define TINY_GLOBALFILES_H
 
 
 #include <map>
@@ -37,7 +37,7 @@ public:
 
 };
 
-class P2PFiles {
+class GlobalFiles {
 
 private:
     /// Mapa rekordów setów plików z kluczem nazw
@@ -45,10 +45,6 @@ private:
 
     /// mutex synchronizujący mapę files
     std::shared_mutex mutex;
-
-    /// Wykorzystywane do wypisywania
-    /// @synchronized
-    std::map<std::string, P2PRecord> getFiles() const;
 
     /// Getter dla rekordu połączonego z danym węzłem
     /// @param nodeName nazwa węzła
@@ -72,7 +68,11 @@ public:
     /// Pokaż wszystkie pliki
     /// @synchronized
     void showFiles();
+
+    File getFileByName(const std::string &fileName);
+
+    std::vector<P2PRecordPossessor> getFilePossessors(const std::string &fileName);
 };
 
 
-#endif //TINY_P2PFILES_H
+#endif //TINY_GLOBALFILES_H

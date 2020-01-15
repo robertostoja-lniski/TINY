@@ -23,6 +23,7 @@ private:
     std::string owner;
     size_t size;
 public:
+    File() = default;
     File(const std::string& name, const std::string& owner, size_t size);
     explicit File(FileBroadcastStruct &fileBroadcastStruct);
 
