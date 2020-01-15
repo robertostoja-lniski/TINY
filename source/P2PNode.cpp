@@ -388,7 +388,6 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
                     File broadcastFile(communicate.files[i]);
                     globalFiles.add(filesPossessor, broadcastFile);
                 }
-
             } else if(communicate.type == UDP_REVOKE){
 //                //revoke communicate type
 //                removeFile(communicate.files[0].name);
