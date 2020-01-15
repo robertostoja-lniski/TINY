@@ -54,9 +54,8 @@ ActionResult P2PNode::uploadFile(const std::string &uploadFileName) {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::showLocalFiles() {
+void P2PNode::showLocalFiles() {
     localFiles.print();
-    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::removeFile(std::string fileName) {
@@ -95,9 +94,8 @@ ActionResult P2PNode::updateLocalFiles(void) {
     return ACTION_NOT_HANDLED;
 }
 
-ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
+void P2PNode::showGlobalFiles() {
     globalFiles.showFiles();
-    return ACTION_SUCCESS;
 }
 
 
