@@ -99,7 +99,7 @@ public:
     // uniewaznia plik
 
     // pokazuje pliki w sytemie
-    ActionResult showGlobalFiles(SHOW_GLOBAL_FILE_TYPE);
+    void showGlobalFiles();
 
     // zmienia tablice lokalnych plikow jesli pojawil sie nowy
     ActionResult updateLocalFiles();
@@ -120,7 +120,7 @@ public:
     ActionResult removeFile(std::string);
 
     /// Pokazuje pliki lokalne
-    ActionResult showLocalFiles();
+    void showLocalFiles();
 
     /// Wysyła komunikat unieważnienia pliku
     ActionResult sendRevokeCommunicate(File);

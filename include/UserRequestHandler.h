@@ -53,10 +53,10 @@ private:
     RequestType preprocessRequest(std::string, std::string &, std::string &);
 
     // dla pojedynczych polecen
-    RequestResult processRequest(const std::string &);
+    void processRequest(const std::string &);
 
     // dla podwojnych polecen
-    RequestResult processRequest(const std::string &, const std::string &);
+    void processRequest(const std::string &, const std::string &);
 
     static void printHelp();
 
