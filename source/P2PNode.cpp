@@ -280,6 +280,12 @@ void P2PNode::prepareForReceivingBroadcast() {
         throw std::runtime_error("Nie udalo sie otworzyc gniazda. Numer bledu: " + std::to_string(errno));
     }
 
+    int sockoptVar = 1;
+    if (setsockopt(recvFd, SOL_SOCKET, SO_BROADCAST, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
+        close(recvFd);
+        throw std::runtime_error("Nie udalo sie setsockopt" + std::to_string(errno));
+    }
+
     if (bind(recvFd, (struct sockaddr *) &broadcast.recvAddress, sizeof(broadcast.recvAddress)) < 0) {
         throw std::runtime_error("Nie udalo bind w odbieraniu. Errno: " + std::to_string(errno));
     }
@@ -306,7 +312,7 @@ void P2PNode::prepareForSendingBroadcast() {
     int sockoptVar = 1;
     if (setsockopt(sendFd, SOL_SOCKET, SO_BROADCAST, (void *) &sockoptVar, sizeof(sockoptVar)) < 0) {
         close(sendFd);
-        throw std::runtime_error("Nie udalo sie setsockopt" + std::to_string(errno));
+        throw std::runtime_error("Nie udalo sie setsockopt przy wysylaniu" + std::to_string(errno));
     }
 
     this->broadcast.sendSocketFd = sendFd;
@@ -366,10 +372,8 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
             broadcast.exitMutex.unlock();
 
             // trzeba pobrać adres nadawacy i zapisać go gdzies (?)
-            socklen_t addrlen;
-            if (recvfrom(broadcast.recvSocketFd, (void *) &communicate, sizeof(communicate),
-//                            0, nullptr, 0) < 0 ){
-                         0, (struct sockaddr *) &broadcast.recvAddress, &addrlen) < 0) {
+            socklen_t addrlen = sizeof(broadcast.recvAddress);
+            if (recvfrom(broadcast.recvSocketFd, (void *) &communicate, sizeof(communicate), 0, (struct sockaddr *) &broadcast.recvAddress, &addrlen) < 0) {
                 logging::ERROR("Blad recive w otrzmywaniu komunikatow\n");
                 continue;
             }
@@ -388,8 +392,6 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
                     File broadcastFile(communicate.files[i]);
                     globalFiles.add(filesPossessor, broadcastFile);
                 }
-
-//                globalFiles.showFiles();
             } else if(communicate.type == UDP_REVOKE){
 //                //revoke communicate type
 //                removeFile(communicate.files[0].name);

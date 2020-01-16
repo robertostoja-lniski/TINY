@@ -1,3 +1,4 @@
+#include <Exit.h>
 #include "UserRequestHandler.h"
 
 void UserRequestHandler::processRequest(const std::string &request) {
@@ -12,7 +13,7 @@ void UserRequestHandler::processRequest(const std::string &request) {
         return;
     } else if(request == "exit"){
         std::cout << "Exit program" << std::endl;
-        exit(0);
+        throw Exit();
     }
 
     if (ret != ACTION_SUCCESS) {
