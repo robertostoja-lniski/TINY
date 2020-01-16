@@ -130,7 +130,6 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
     std::string defaultWorkspacePath = "/home/";
 #endif
     defaultWorkspacePath += getUserName() + "/" + workspaceDirName;
-    std::cout << defaultWorkspacePath << std::endl;
     if (!filesys::exists(defaultWorkspacePath) && mkdir(defaultWorkspacePath.c_str(), S_IRWXU) != 0) {
         std::cout << "Nie mozna stowrzyc katalogu\n";
         return DIR_CANNOT_CREATE;
@@ -248,14 +247,13 @@ FileOperationResult LocalSystemHandler::addToConfig(std::string name, std::strin
 
     // dodaje nowy rekord
     configFile.open(fullConfigFilePath, std::ios::in | std::ios::app);
-    configFile << name << " " <<  owner << " " << size;
+    configFile << name << " " <<  owner << " " << size << "\n";
 
     return FILE_SUCCESS;
 }
 
 int LocalSystemHandler::createAndOpenFileInWorkspace(std::string name) {
     std::string path = workspaceAbsoluteDirPath + name;
-    std::cout << path << "\n";
     int fd = open(path.c_str(), O_CREAT | O_WRONLY, S_IRWXU);
     if (fd < 0) {
         throw std::runtime_error("file create failed\n");

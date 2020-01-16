@@ -39,6 +39,10 @@ class P2PRecord {
 private:
     /// Set plików
     std::set<File> fileSet;
+public:
+    const std::set<File> &getFileSet() const;
+
+private:
 
     /// Mutex używany do synchronizacji zapis-odczyt setu plików
     std::shared_mutex mutex;

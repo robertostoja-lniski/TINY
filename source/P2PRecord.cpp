@@ -24,10 +24,6 @@ AddFileResult P2PRecord::addFile(const File& file) {
 
 void P2PRecord::print() {
     std::shared_lock<std::shared_mutex> lk(mutex);
-    if (fileSet.empty()) {
-        std::cout << "System globalny nie posiada plikow." << std::endl;
-        return;
-    }
 
     for (auto const &item : fileSet) {
         std::cout << item << std::endl;
@@ -82,5 +78,9 @@ std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& 
 
     return communicates;
 
+}
+
+const std::set<File> &P2PRecord::getFileSet() const {
+    return fileSet;
 }
 

@@ -54,9 +54,8 @@ ActionResult P2PNode::uploadFile(const std::string &uploadFileName) {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::showLocalFiles() {
+void P2PNode::showLocalFiles() {
     localFiles.print();
-    return ACTION_SUCCESS;
 }
 
 ActionResult P2PNode::removeFile(std::string fileName) {
@@ -87,17 +86,12 @@ ActionResult P2PNode::removeFile(std::string fileName) {
     return ACTION_SUCCESS;
 }
 
-ActionResult P2PNode::downloadFile(const std::string &) {
-    return ACTION_NOT_HANDLED;
-}
-
 ActionResult P2PNode::updateLocalFiles(void) {
     return ACTION_NOT_HANDLED;
 }
 
-ActionResult P2PNode::showGlobalFiles(SHOW_GLOBAL_FILE_TYPE type) {
+void P2PNode::showGlobalFiles() {
     globalFiles.showFiles();
-    return ACTION_SUCCESS;
 }
 
 
@@ -266,6 +260,16 @@ void P2PNode::requestAndDownloadFileFragment(fileRequest request, std::string ip
     }
 }
 
+ActionResult P2PNode::performDownloadingFileFragment(fileRequest request, std::string ip_addr){
+    try{
+        requestAndDownloadFileFragment(request, ip_addr);
+    }
+    catch(std::runtime_error &e){
+        return ACTION_FAILURE;
+    }
+    return ACTION_SUCCESS;
+}
+
 void P2PNode::prepareForReceivingBroadcast() {
     int recvFd;
     broadcast.recvAddress.sin_family = AF_INET;
@@ -431,6 +435,86 @@ bool P2PNode::isRemoteIp(const std::string& testedIp) {
     return true;
 }
 
+ActionResult P2PNode::downloadFile(const std::string &fileName) {
 
+    File file;
+    try {
+        file = globalFiles.getFileByName(fileName);
+    }
+    catch (std::runtime_error& error) {
+            return ACTION_FAILURE;
+    }
 
+    size_t fileSize = file.getSize();
+    auto possessors = globalFiles.getFilePossessors(fileName);
 
+    std::string log = "Żądano pliku " + fileName + " Posiadaja go";
+    for (auto &p: possessors) {
+        log += " " + p.getName() + ":" + "(" + p.getIp() + ")";
+    }
+    logging::TRACE(log);
+
+    if (!possessors.empty()){
+        //pobranie ilosci bajtow do pobrania od kazdego wysylajacego
+        size_t toDownloadFromEach = fileSize/possessors.size();
+        size_t rest = fileSize%possessors.size();
+        fileRequest request {};
+        strcpy(request.fileName, fileName.c_str());
+        request.bytes = toDownloadFromEach;
+        //rezultaty wykonan poszczegolnych pobieran
+        std::vector <std::future<ActionResult >> results;
+
+        for (auto i = 0; i < possessors.size(); i++){
+            request.offset = i * toDownloadFromEach;
+            //ktos musi doslac fragment, ktory pozostanie z dzielenia.
+            request.bytes += (i == possessors.size() -1 ) ? rest : 0;
+            log = "Zaczynam pobieranie fragmentu od " + std::to_string(request.offset) + " do " + std::to_string(request.offset + request.bytes) + " ";
+            log += "od " + possessors[i].getName();
+            logging::TRACE(log);
+            std::future<ActionResult> t = std::async(&P2PNode::performDownloadingFileFragment, this, request, possessors[i].getIp());
+            results.push_back(std::move(t));
+        }
+        //sprawdzamy czy wszystkie pobierania wykonaly sie poprawnie
+        for (int i = 0; i < results.size(); i++) {
+
+            ActionResult result = results[i].get();
+            //jezeli nie, to czekamy ? sekund na kolejny broadcast i ponownie sprawdzamy kto ma dany plik
+            while (result == ACTION_FAILURE) {
+                sleep(5);
+                possessors = globalFiles.getFilePossessors(fileName);
+                //jezeli okaze sie ze nikt nie ma pliku to zwracamy failure.
+                if (possessors.empty()){
+                    return ACTION_FAILURE;
+                }
+                //iterujemy po posiadaczach pliku i jezeli uda nam sie pobrac od kogos to breakujemy petle.
+                for (const auto& possessor : possessors){
+
+                    request.offset = i * toDownloadFromEach;
+                    request.bytes = toDownloadFromEach + ((i == results.size() - 1) ? rest : 0);
+                    std::future<ActionResult> t = std::async(&P2PNode::performDownloadingFileFragment, this, request, possessor.getIp());
+                    result = t.get();
+                    if (result == ACTION_SUCCESS) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    else {
+        //nikt nie ma wskazanego pliku
+        return ACTION_FAILURE;
+    }
+
+    // nie jest potrzebna tutaj synchronizacja,
+    // poniewaz ten sam watek dodaje i usuwa pliki
+    AddFileResult ret = localFiles.addFile(file);
+    if (ret != ADD_SUCCESS) {
+        logging::ERROR("p2pnode: nie udalo sie dodac pliku do systemu lokalnego");
+        return ACTION_FAILURE;
+    }
+    if (handler.addToConfig(file.getName(), file.getOwner(), file.getSize()) != FILE_SUCCESS) {
+        logging::ERROR("p2pnode: pobrano plik ale nie dodano do pliku konfiguracyjnego");
+        return ACTION_FAILURE;
+    }
+    return ACTION_SUCCESS;
+}
