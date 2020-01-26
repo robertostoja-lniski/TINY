@@ -217,7 +217,7 @@ FileOperationResult LocalSystemHandler::removeFromConfigByName(std::string name)
         }
 
         if (fileName != name) {
-            configFile << " " << fileName << " " <<  fileOwner << " " << fileSize << " " << isRevoked << "\n";
+            configFile << fileName << " " <<  fileOwner << " " << fileSize << " " << isRevoked << "\n";
         }
     }
 
