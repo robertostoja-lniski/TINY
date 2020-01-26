@@ -7,6 +7,7 @@
 
 #include <string>
 #include <ostream>
+#include <chrono>
 #include "FileBroadcastStruct.h"
 
 /**
@@ -23,6 +24,7 @@ private:
     std::string owner;
     size_t size;
     bool isRevoked {false};
+    std::chrono::milliseconds timeout{std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()) + std::chrono::milliseconds(10000000)};
 
 public:
     File() = default;
@@ -53,6 +55,12 @@ public:
     friend std::ostream &operator<<(std::ostream &os, const File &file);
 
     void setRevoked(bool);
+
+    void setTimeout(std::chrono::milliseconds t);
+
+    std::chrono::milliseconds getTimeout();
+
+    bool isTimedOut() const;
 };
 
 

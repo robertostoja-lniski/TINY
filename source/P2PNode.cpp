@@ -367,6 +367,7 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
 
             for (int i = 0; i < communicate.filesCount; ++i) {
                 File broadcastFile(communicate.files[i]);
+                broadcastFile.setTimeout(broadcast.interval + std::chrono::milliseconds(500));
                 globalFiles.put(filesPossessor, broadcastFile);
 
                 if(broadcastFile.getIsRevoked()) {
@@ -463,7 +464,7 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
             ActionResult result = results[i].get();
             //jezeli nie, to czekamy ? sekund na kolejny broadcast i ponownie sprawdzamy kto ma dany plik
             while (result == ACTION_FAILURE) {
-                sleep(5);
+                std::this_thread::sleep_for(broadcast.interval);
                 possessors = globalFiles.getFilePossessors(fileName);
                 //jezeli okaze sie ze nikt nie ma pliku to zwracamy failure.
                 if (possessors.empty()){

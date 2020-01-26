@@ -5,6 +5,7 @@
 
 int main() {
 
+
     logging::configure({ {"type", "file"}, {"file_name", "log.txt"}, {"reopen_interval", "1"} });
     logging::TRACE("Uruchomienie programu.");
     try {

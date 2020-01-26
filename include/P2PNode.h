@@ -79,7 +79,7 @@ private:
         std::mutex preparationMutex, exitMutex;
         bool exit = false;
         std::thread sendThread, recvThread;
-        std::chrono::seconds interval = std::chrono::seconds(5);
+        std::chrono::milliseconds interval = std::chrono::milliseconds(5000);
 
         const int UDP_BROADCAST_PORT = 7654;
         const char *UDP_BROADCAST_IP = BROADCAST_ADDR;

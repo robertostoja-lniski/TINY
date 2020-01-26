@@ -1,5 +1,6 @@
 
 #include <File.h>
+#include <chrono>
 
 File::File(const std::string& name, const std::string& owner, const size_t size) : name(name), owner(owner), size(size){
     // Długość nazwy i właściciela pliku nie może być większa niż 128 bajtów
@@ -43,4 +44,18 @@ void File::setRevoked(bool x) {
 
 bool File::getIsRevoked() const {
     return this->isRevoked;
+}
+
+void File::setTimeout(std::chrono::milliseconds t) {
+    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+    this->timeout = t + ms;
+}
+
+std::chrono::milliseconds File::getTimeout() {
+    return this->timeout;
+}
+
+bool File::isTimedOut() const {
+    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+    return ms > this->timeout;
 }

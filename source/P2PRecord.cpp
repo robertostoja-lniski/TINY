@@ -75,7 +75,8 @@ std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& 
 
 }
 
-const std::set<File> &P2PRecord::getFileSet() const {
+const std::set<File> &P2PRecord::getFileSet() {
+    deleteTimedOutFiles();
     return fileSet;
 }
 
@@ -88,6 +89,7 @@ RecordOperationResult P2PRecord::revokeFile(File file) {
 }
 
 const File * P2PRecord::getFileByName(std::string fileName) {
+    deleteTimedOutFiles();
     mutex.lock_shared();
     for (auto& file : fileSet) {
         if (file.getName() == fileName) {
@@ -98,4 +100,17 @@ const File * P2PRecord::getFileByName(std::string fileName) {
     mutex.unlock_shared();
     return nullptr;
 }
+
+void P2PRecord::deleteTimedOutFiles() {
+    mutex.lock();
+
+    for (const auto &file:fileSet) {
+        if(file.isTimedOut()) {
+            this->fileSet.erase(file);
+        }
+    }
+
+    mutex.unlock();
+}
+
 

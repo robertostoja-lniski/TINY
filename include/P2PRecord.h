@@ -40,7 +40,7 @@ private:
     /// Set plików
     std::set<File> fileSet;
 public:
-    const std::set<File> &getFileSet() const;
+    const std::set<File> &getFileSet();
 
 private:
 
@@ -71,6 +71,8 @@ public:
     std::vector<Communicate> getBroadcastCommunicates(const std::string&);
 
     RecordOperationResult revokeFile(File file);
+
+    void deleteTimedOutFiles();
 };
 
 
