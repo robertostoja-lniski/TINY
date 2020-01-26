@@ -10,29 +10,22 @@ P2PRecord &GlobalFiles::operator[](P2PRecordPossessor possessor) {
 }
 
 AddGlobalFileResult GlobalFiles::put(P2PRecordPossessor possessor, File file) {
-    std::unique_lock<std::shared_mutex> lk(mutex);
+    mutex.lock_shared();
 
     files[possessor].putFile(std::move(file));
+    mutex.unlock_shared();
+
     return ADD_GLOBAL_SUCCESS;
 }
 
-void GlobalFiles::revoke(File file) {
-    std::unique_lock<std::shared_mutex> lk(mutex);
-
-    // usuń plik z każdego węzła
-    for (auto &record : files) {
-        record.second.removeFile(file);
-    }
-
-}
-
 void GlobalFiles::showFiles() {
-    std::shared_lock<std::shared_mutex> lk(mutex);
+    mutex.lock_shared();
 
     for(auto &record : files){
         std::cout << record.first.getName() << " (" + record.first.getIp() + ")" << ": " << std::endl;
         record.second.print();
     }
+    mutex.unlock_shared();
 }
 
 File GlobalFiles::getFileByName(const std::string &fileName) {

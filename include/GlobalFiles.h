@@ -58,9 +58,6 @@ public:
     /// Dodaje plik do listy plików danego węzła. Jeśli był unieważniony, zwraca wartość informującą o tym.
     AddGlobalFileResult put(P2PRecordPossessor possessor, File file);
 
-    /// Usuwa plik ze wszytskich list
-    void revoke(File file);
-
     /// Aktualizuj konkretny rekord
     /// @synchronized
     void updateFiles(std::string name, P2PRecord newFiles);

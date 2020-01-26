@@ -16,11 +16,11 @@ AddFileResult P2PRecord::putFile(const File& file) {
 }
 
 void P2PRecord::print() {
-    std::shared_lock<std::shared_mutex> lk(mutex);
-
+    mutex.lock_shared();
     for (auto const &item : fileSet) {
         std::cout << item << std::endl;
     }
+    mutex.unlock_shared();
 }
 
 RecordOperationResult P2PRecord::removeFile(const File& file) {
@@ -45,7 +45,7 @@ RecordOperationResult P2PRecord::removeFile(const File& file) {
 
 std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& owner) {
     // maksymalnie MAX_FILES_IN_COM plikow w komunikacie, wiec musimy wyslac kilka komunikatow
-    std::shared_lock<std::shared_mutex> lk(this->mutex);
+    mutex.unlock_shared();
 
     std::vector<Communicate> communicates;
 
@@ -54,6 +54,8 @@ std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& 
     for (const auto& file:fileSet) {
         files.push_back(file);
     }
+
+    mutex.unlock_shared();
 
     size_t filesLeftToAdd = files.size();
     size_t fileID = 0;
@@ -81,7 +83,6 @@ RecordOperationResult P2PRecord::revokeFile(File file) {
     File newFile(file.getName(), file.getOwner(), file.getSize());
     newFile.setRevoked(true);
 
-    this->removeFile(file);
     this->putFile(newFile);
     return SUCCESS;
 }
