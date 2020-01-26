@@ -19,9 +19,10 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler &handler) : tcpPort(tcpPort), h
     handler.setDefaultWorkspace();
     auto files = handler.getPreviousState();
 
-    for (auto [name, owner, size] : files) {
+    for (auto [name, owner, size, isRevoked] : files) {
 
         File restoredFile(name, owner, size);
+        restoredFile.setRevoked(isRevoked);
         localFiles.putFile(restoredFile);
     }
     prepareForSendingBroadcast();
@@ -46,7 +47,7 @@ ActionResult P2PNode::uploadFile(const std::string &uploadFileName) {
         return ACTION_FAILURE;
     }
 
-    if (handler.addToConfig(file.getName(), file.getOwner(), file.getSize()) != FILE_SUCCESS) {
+    if (handler.addToConfig(file.getName(), file.getOwner(), file.getSize(), file.getIsRevoked()) != FILE_SUCCESS) {
         return ACTION_FAILURE;
     }
 
@@ -494,7 +495,7 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
         logging::ERROR("p2pnode: nie udalo sie dodac pliku do systemu lokalnego");
         return ACTION_FAILURE;
     }
-    if (handler.addToConfig(file.getName(), file.getOwner(), file.getSize()) != FILE_SUCCESS) {
+    if (handler.addToConfig(file.getName(), file.getOwner(), file.getSize(), file.getIsRevoked()) != FILE_SUCCESS) {
         logging::ERROR("p2pnode: pobrano plik ale nie dodano do pliku konfiguracyjnego");
         return ACTION_FAILURE;
     }
@@ -513,9 +514,17 @@ ActionResult P2PNode::revokeFile(std::string fileName) {
     }
 
     RecordOperationResult ret = localFiles.revokeFile(*file);
-    if (ret == SUCCESS) {
-        return ACTION_SUCCESS;
-    } else {
+    if (ret != SUCCESS) {
         return ACTION_FAILURE;
     }
+
+    if(handler.removeFromConfigByName(fileName) != FILE_SUCCESS) {
+        return ACTION_FAILURE;
+    }
+
+    if(handler.addToConfig(file->getName(), file->getOwner(), file->getSize(), true) != FILE_SUCCESS){
+        return ACTION_FAILURE;
+    }
+
+    return ACTION_SUCCESS;
 }

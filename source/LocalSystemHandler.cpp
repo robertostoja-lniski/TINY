@@ -146,7 +146,7 @@ DirOperationResult LocalSystemHandler::setDefaultWorkspace() {
     return DIR_SUCCESS;
 }
 
-std::vector<std::tuple<std::string, std::string, size_t>> LocalSystemHandler::getPreviousState() {
+std::vector<std::tuple<std::string, std::string, size_t, bool>> LocalSystemHandler::getPreviousState() {
 
     std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
     if(!isFsFilePathCorrect(fullConfigFilePath)) {
@@ -163,18 +163,19 @@ std::vector<std::tuple<std::string, std::string, size_t>> LocalSystemHandler::ge
     std::string fileName;
     std::string fileOwner;
     size_t fileSize;
+    bool isRevoked;
     // otwiera plik i iteruje po nim
     configFile.open(fullConfigFilePath, std::ios::in);
-    std::vector<std::tuple<std::string, std::string, size_t>> previousState;
+    std::vector<std::tuple<std::string, std::string, size_t, bool>> previousState;
 
     while (std::getline(infile, configRecord)) {
 
         std::istringstream iss(configRecord);
-        if (!(iss >> fileName >> fileOwner >> fileSize)) {
+        if (!(iss >> fileName >> fileOwner >> fileSize >> isRevoked)) {
             throw std::runtime_error("Wrong config file");
         }
 
-        previousState.emplace_back(fileName, fileOwner, fileSize);
+        previousState.emplace_back(fileName, fileOwner, fileSize, isRevoked);
     }
 
     configFile.close();
@@ -202,6 +203,7 @@ FileOperationResult LocalSystemHandler::removeFromConfigByName(std::string name)
     std::string fileName;
     std::string fileOwner;
     size_t fileSize;
+    bool isRevoked;
 
     // tworzy i otwiera plik do zapisu
     std::string fullTmpConfigFilePath = workspaceAbsoluteDirPath  + ".tmp" + configFileName;
@@ -210,12 +212,12 @@ FileOperationResult LocalSystemHandler::removeFromConfigByName(std::string name)
     while (std::getline(infile, configRecord)) {
 
         std::istringstream iss(configRecord);
-        if (!(iss >> fileName >> fileOwner >> fileSize)) {
+        if (!(iss >> fileName >> fileOwner >> fileSize >> isRevoked)) {
             return FILE_CANNOT_READ;
         }
 
         if (fileName != name) {
-            configFile << fileName << "\n";
+            configFile << " " << fileName << " " <<  fileOwner << " " << fileSize << " " << isRevoked << "\n";
         }
     }
 
@@ -235,7 +237,7 @@ FileOperationResult LocalSystemHandler::removeFromConfigByName(std::string name)
     return FILE_SUCCESS;
 }
 
-FileOperationResult LocalSystemHandler::addToConfig(std::string name, std::string owner, size_t size) {
+FileOperationResult LocalSystemHandler::addToConfig(std::string name, std::string owner, size_t size, bool isRevoked) {
 
     std::string fullConfigFilePath = workspaceAbsoluteDirPath + configFileName;
 
@@ -247,7 +249,7 @@ FileOperationResult LocalSystemHandler::addToConfig(std::string name, std::strin
 
     // dodaje nowy rekord
     configFile.open(fullConfigFilePath, std::ios::in | std::ios::app);
-    configFile << name << " " <<  owner << " " << size << "\n";
+    configFile << name << " " <<  owner << " " << size <<  " " << isRevoked << std::endl;
 
     return FILE_SUCCESS;
 }

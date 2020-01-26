@@ -79,7 +79,7 @@ public:
     //// dodaje plik do folderu roboczego
     FileOperationResult addFileToLocalSystem(std::string);
 
-    FileOperationResult addToConfig(std::string name, std::string owner, size_t size);
+    FileOperationResult addToConfig(std::string name, std::string owner, size_t size, bool isRevoked);
 
     FileOperationResult removeFromConfigByName(std::string);
 
@@ -87,7 +87,7 @@ public:
 
     //// zwraca wektor nazw plikow, ktorych bylismy wlascicielem
     //// przed zamknieciem programu
-    std::vector<std::tuple<std::string, std::string, size_t>> getPreviousState();
+    std::vector<std::tuple<std::string, std::string, size_t, bool>> getPreviousState();
 
     //// zwraca ostatni czlon sciezki w systemie plikow
     std::string getLastTokenOf(const std::string);
