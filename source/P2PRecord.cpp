@@ -59,14 +59,13 @@ std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& 
     mutex.unlock_shared();
 
     size_t filesLeftToAdd = files.size();
-    size_t fileID = 0;
     while(filesLeftToAdd > 0){
         size_t filesToAdd = std::min(filesLeftToAdd, (size_t)MAX_FILES_IN_COM);
         auto communicate = Communicate(filesToAdd, owner);
 
         for (int i = 0; i < filesToAdd; i++) {
-            communicate.files[fileID].setValues(files[fileID].getName(), files[fileID].getOwner(),
-                                                files[fileID].getSize(), files[fileID].getIsRevoked());
+            communicate.files[i].setValues(files[i].getName(), files[i].getOwner(),
+                                                files[i].getSize(), files[i].getIsRevoked());
         }
         communicates.push_back(communicate);
         filesLeftToAdd -= filesToAdd;

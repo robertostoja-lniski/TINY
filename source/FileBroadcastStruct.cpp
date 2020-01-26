@@ -12,5 +12,6 @@ void FileBroadcastStruct::setValues(std::string name_, std::string owner_, size_
     const char *o = owner_.c_str();
     strncpy(name, n, 63);
     strncpy(owner, o, 63);
-    size = size;
+    this->size = size;
+    this->isRevoked = isRevoked;
 }
