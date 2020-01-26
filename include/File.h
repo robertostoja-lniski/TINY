@@ -22,6 +22,8 @@ private:
     std::string name;
     std::string owner;
     size_t size;
+    bool isRevoked {false};
+
 public:
     File() = default;
     File(const std::string& name, const std::string& owner, size_t size);
@@ -36,6 +38,8 @@ public:
     ///Getter dla rozmiaru
     [[nodiscard]] std::size_t getSize() const;
 
+    bool getIsRevoked() const;
+
     /**
      * Operator porównania.
      * Niezbędny do istnienia seta. (Set musi mieć operator porównania)
@@ -47,6 +51,8 @@ public:
     }
 
     friend std::ostream &operator<<(std::ostream &os, const File &file);
+
+    void setRevoked(bool);
 };
 
 

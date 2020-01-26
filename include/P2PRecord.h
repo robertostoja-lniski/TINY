@@ -52,10 +52,12 @@ public:
     /// Dodaje plik do setu plików
     /// @if plik już dodany @then nie dodaje i zwraca ADD_ALREADY_EXISTS
     /// @return @enum AddFileResult
-    AddFileResult addFile(const File&);
+    AddFileResult putFile(const File&);
 
     /// Usuwa plik z setu plików
     RecordOperationResult removeFile(const File&);
+
+    const File * getFileByName(std::string fileName);
 
     void print();
 
@@ -68,6 +70,7 @@ public:
      */
     std::vector<Communicate> getBroadcastCommunicates(const std::string&);
 
+    RecordOperationResult revokeFile(File file);
 };
 
 

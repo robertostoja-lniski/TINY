@@ -28,12 +28,17 @@ void UserRequestHandler::processRequest(const std::string &requestPrefix, const 
 
     if (requestPrefix == "get") {
         ret = node.downloadFile(requestSufix);
-
+        if(ret == ACTION_FILE_REVOKED) {
+            std::cout << "Nie mozna pobrac uniewaznionego pliku\n";
+            return;
+        }
     } else if (requestPrefix == "put") {
         ret = node.uploadFile(requestSufix);
 
     } else if (requestPrefix == "rm") {
         ret = node.removeFile(requestSufix);
+    } else if (requestPrefix == "revoke") {
+        ret = node.revokeFile(requestSufix);
     }
 
     if (ret != ACTION_SUCCESS) {
@@ -51,7 +56,9 @@ void UserRequestHandler::printHelp() {
     std::cout << "get [nazwa_pliku]                             \tpobranie pilku\n";
     std::cout << "put [sciezka pliku]                           \tdodanie pliku do systemu\n";
     std::cout << "rm [nazwa_pliku]                              \tusuwa plik z systemu\n";
+    std::cout << "revoke [nazwa_pliku]                          \tuniewaznia plik\n";
     std::cout << "exit                                          \twyjscie z programu\n";
+
 }
 
 void UserRequestHandler::waitForRequest() {
@@ -91,5 +98,5 @@ UserRequestHandler::UserRequestHandler(P2PNode &node) : node(node) {
 }
 
 void UserRequestHandler::printPrompt() {
-    std::cout << "TINBash> ";
+    std::cout << "TIN> ";
 }

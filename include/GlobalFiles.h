@@ -56,7 +56,7 @@ public:
     void addToFilesRevokedByMe(File file);
 
     /// Dodaje plik do listy plików danego węzła. Jeśli był unieważniony, zwraca wartość informującą o tym.
-    AddGlobalFileResult add(P2PRecordPossessor possessor, File file);
+    AddGlobalFileResult put(P2PRecordPossessor possessor, File file);
 
     /// Usuwa plik ze wszytskich list
     void revoke(File file);

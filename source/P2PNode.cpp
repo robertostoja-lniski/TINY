@@ -22,7 +22,7 @@ P2PNode::P2PNode(int tcpPort, LocalSystemHandler &handler) : tcpPort(tcpPort), h
     for (auto [name, owner, size] : files) {
 
         File restoredFile(name, owner, size);
-        localFiles.addFile(restoredFile);
+        localFiles.putFile(restoredFile);
     }
     prepareForSendingBroadcast();
     prepareForReceivingBroadcast();
@@ -41,7 +41,7 @@ ActionResult P2PNode::uploadFile(const std::string &uploadFileName) {
     File file(systemFileName, handler.getUserName(), fileSize);
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
-    AddFileResult ret = localFiles.addFile(file);
+    AddFileResult ret = localFiles.putFile(file);
     if (ret != ADD_SUCCESS) {
         return ACTION_FAILURE;
     }
@@ -70,24 +70,12 @@ ActionResult P2PNode::removeFile(std::string fileName) {
         return ACTION_FAILURE;
     }
 
-//    globalFiles.revoke(tmp);
-//    globalFiles.addToFilesRevokedByMe(tmp);
-
-    if (sendRevokeCommunicate(std::move(tmp)) != ACTION_SUCCESS) {
-        uploadFile(fileName);
-        return ACTION_FAILURE;
-    }
-
     if (handler.removeFileFromLocalSystem(fileName) != FILE_SUCCESS) {
         uploadFile(fileName);
         return ACTION_FAILURE;
     }
 
     return ACTION_SUCCESS;
-}
-
-ActionResult P2PNode::updateLocalFiles(void) {
-    return ACTION_NOT_HANDLED;
 }
 
 void P2PNode::showGlobalFiles() {
@@ -318,17 +306,6 @@ void P2PNode::prepareForSendingBroadcast() {
     this->broadcast.sendSocketFd = sendFd;
 }
 
-ActionResult P2PNode::sendRevokeCommunicate(File file) {
-    Communicate communicate(FileBroadcastStruct(file.getName(), file.getOwner(), file.getSize()),
-                            handler.getUserName());
-
-    if (send(broadcast.sendSocketFd, (void *) &communicate, (int) sizeof(communicate), 0) < (int) sizeof(communicate)) {
-        return ACTION_FAILURE;
-    }
-    return ACTION_SUCCESS;
-}
-
-
 ActionResult P2PNode::startBroadcastingFiles() {
     broadcast.sendThread = std::thread([this]() {
         while (true) {
@@ -387,18 +364,20 @@ ActionResult P2PNode::startReceivingBroadcastingFiles() {
 
             P2PRecordPossessor filesPossessor(communicate.userName,std::string(str));
 
-            if (communicate.type == UDP_BROADCAST) {
-                for (int i = 0; i < communicate.filesCount; ++i) {
-                    File broadcastFile(communicate.files[i]);
-                    globalFiles.add(filesPossessor, broadcastFile);
+            for (int i = 0; i < communicate.filesCount; ++i) {
+                File broadcastFile(communicate.files[i]);
+                globalFiles.put(filesPossessor, broadcastFile);
+
+                if(broadcastFile.getIsRevoked()) {
+                    auto file = localFiles.getFileByName(broadcastFile.getName());
+                    if(file != nullptr){
+                        localFiles.revokeFile(*file);
+                    }
                 }
-            } else if(communicate.type == UDP_REVOKE){
-//                //revoke communicate type
-//                removeFile(communicate.files[0].name);
-//                globalFiles.revoke(File(communicate.files[0]));
-//                localFiles.removeFile(File(communicate.files[0]));
-//                updateLocalFiles();
+
+                // localfile tez zmienic na revoke (jezeli dany plik juz pobralismy)
             }
+
         }
     });
 
@@ -440,6 +419,9 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
     File file;
     try {
         file = globalFiles.getFileByName(fileName);
+        if(file.getIsRevoked()){
+            return ACTION_FILE_REVOKED;
+        }
     }
     catch (std::runtime_error& error) {
             return ACTION_FAILURE;
@@ -507,7 +489,7 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
 
     // nie jest potrzebna tutaj synchronizacja,
     // poniewaz ten sam watek dodaje i usuwa pliki
-    AddFileResult ret = localFiles.addFile(file);
+    AddFileResult ret = localFiles.putFile(file);
     if (ret != ADD_SUCCESS) {
         logging::ERROR("p2pnode: nie udalo sie dodac pliku do systemu lokalnego");
         return ACTION_FAILURE;
@@ -517,4 +499,23 @@ ActionResult P2PNode::downloadFile(const std::string &fileName) {
         return ACTION_FAILURE;
     }
     return ACTION_SUCCESS;
+}
+
+ActionResult P2PNode::revokeFile(std::string fileName) {
+
+    const File *file = localFiles.getFileByName(fileName);
+    if (file == nullptr) {
+        return ACTION_FAILURE;
+    }
+
+    if ( file->getOwner() != handler.getUserName()){
+        return ACTION_FAILURE;
+    }
+
+    RecordOperationResult ret = localFiles.revokeFile(*file);
+    if (ret == SUCCESS) {
+        return ACTION_SUCCESS;
+    } else {
+        return ACTION_FAILURE;
+    }
 }

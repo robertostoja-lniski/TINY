@@ -21,8 +21,6 @@ g++ -std=c++11 -x c++ -pthread -DLOGGING_LEVEL_ALL -DTEST_LOGGING logging.hpp -o
 
 namespace logging {
 
-    //TODO: use macros (again) so __FILE__ __LINE__ could be automatically added to certain error levels?
-
     //the log levels we support
     enum class log_level : uint8_t { TRACE = 0, DEBUG = 1, INFO = 2, WARN = 3, ERROR = 4 };
     struct enum_hasher { template <typename T> std::size_t operator()(T t) const { return static_cast<std::size_t>(t); } };
@@ -109,7 +107,6 @@ namespace logging {
         const std::unordered_map<log_level, std::string, enum_hasher> levels;
     };
 
-    //TODO: add log rolling
     //Logger that writes to file
     class file_logger : public Logger {
     public:
@@ -157,7 +154,6 @@ namespace logging {
         }
     protected:
         void reopen() {
-            //TODO: use CLOCK_MONOTONIC_COARSE
             //check if it should be closed and reopened
             auto now = std::chrono::system_clock::now();
             lock.lock();

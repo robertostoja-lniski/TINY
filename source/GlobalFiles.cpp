@@ -9,10 +9,10 @@ P2PRecord &GlobalFiles::operator[](P2PRecordPossessor possessor) {
     return files[possessor];
 }
 
-AddGlobalFileResult GlobalFiles::add(P2PRecordPossessor possessor, File file) {
+AddGlobalFileResult GlobalFiles::put(P2PRecordPossessor possessor, File file) {
     std::unique_lock<std::shared_mutex> lk(mutex);
 
-    files[possessor].addFile(std::move(file));
+    files[possessor].putFile(std::move(file));
     return ADD_GLOBAL_SUCCESS;
 }
 

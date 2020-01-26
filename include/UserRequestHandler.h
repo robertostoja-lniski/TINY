@@ -36,7 +36,7 @@ private:
     const std::vector<std::string> singleCommands = {"ls-my", "ls", "ls-owners", "help", "exit"};
 
     /// Podwójne komendy
-    const std::vector<std::string> doubleCommandsPrefix = {"get", "add", "put", "rm"};
+    const std::vector<std::string> doubleCommandsPrefix = {"get", "put", "put", "rm", "revoke"};
 
     P2PNode &node;
 

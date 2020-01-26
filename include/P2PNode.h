@@ -23,6 +23,7 @@ enum ActionResult {
     ACTION_SUCCESS = 0,
     ACTION_NO_EFFECT = 1,
     ACTION_FAILURE = 2,
+    ACTION_FILE_REVOKED = 3,
 };
 
 
@@ -101,9 +102,6 @@ public:
     // pokazuje pliki w sytemie
     void showGlobalFiles();
 
-    // zmienia tablice lokalnych plikow jesli pojawil sie nowy
-    ActionResult updateLocalFiles();
-
     // rozglasza pliki po zmianie
     ActionResult startBroadcastingFiles();
 
@@ -118,6 +116,8 @@ public:
 
     /// Usuwa plik z lokalnego systemu
     ActionResult removeFile(std::string);
+
+    ActionResult revokeFile(std::string);
 
     /// Pokazuje pliki lokalne
     void showLocalFiles();

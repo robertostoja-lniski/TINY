@@ -28,10 +28,19 @@ File::File(FileBroadcastStruct &fileBroadcastStruct) {
     name = fileBroadcastStruct.name;
     owner = fileBroadcastStruct.owner;
     size = fileBroadcastStruct.size;
+    isRevoked = fileBroadcastStruct.isRevoked;
 }
 
 
 std::ostream &operator<<(std::ostream &os, const File &file) {
-    os << "name: " << file.name << " ---|--- owner: " << file.owner << " ---|--- size: " << file.size;
+    os << "name: " << file.name << " ---|--- owner: " << file.owner << " ---|--- size: " << file.size << " ---|--- revoked " << file.isRevoked;
     return os;
+}
+
+void File::setRevoked(bool x) {
+    this->isRevoked = x;
+}
+
+bool File::getIsRevoked() const {
+    return this->isRevoked;
 }

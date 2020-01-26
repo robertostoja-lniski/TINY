@@ -2,18 +2,11 @@
 #include <vector>
 #include <FileBroadcastStruct.h>
 
-AddFileResult P2PRecord::addFile(const File& file) {
-
-    mutex.lock_shared();
-
-    auto it = fileSet.find(file);
-    if (it != fileSet.end()) {
-        mutex.unlock_shared();
-        return ADD_ALREADY_EXISTS;
+AddFileResult P2PRecord::putFile(const File& file) {
+    auto it = getFileByName(file.getName());
+    if (it != nullptr) {
+        removeFile(file);
     }
-
-    mutex.unlock_shared();
-
 
     mutex.lock();
     fileSet.insert(file);
@@ -70,7 +63,7 @@ std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& 
 
         for (int i = 0; i < filesToAdd; i++) {
             communicate.files[fileID].setValues(files[fileID].getName(), files[fileID].getOwner(),
-                                                files[fileID].getSize());
+                                                files[fileID].getSize(), files[fileID].getIsRevoked());
         }
         communicates.push_back(communicate);
         filesLeftToAdd -= filesToAdd;
@@ -82,5 +75,25 @@ std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& 
 
 const std::set<File> &P2PRecord::getFileSet() const {
     return fileSet;
+}
+
+RecordOperationResult P2PRecord::revokeFile(File file) {
+    File newFile(file.getName(), file.getOwner(), file.getSize());
+    newFile.setRevoked(true);
+
+    this->removeFile(file);
+    this->putFile(newFile);
+    return SUCCESS;
+}
+
+const File * P2PRecord::getFileByName(std::string fileName) {
+    mutex.lock_shared();
+    for (auto& file : fileSet) {
+        if (file.getName() == fileName) {
+            return &file;
+        }
+    }
+    mutex.unlock_shared();
+    return nullptr;
 }
 
