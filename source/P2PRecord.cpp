@@ -4,6 +4,7 @@
 
 AddFileResult P2PRecord::putFile(const File& file) {
     auto it = getFileByName(file.getName());
+    // poniewaz w secie nie da sie zmieniac wartosci to usuwamy i dodajemy
     if (it != nullptr) {
         removeFile(file);
     }
@@ -91,6 +92,7 @@ const File * P2PRecord::getFileByName(std::string fileName) {
     mutex.lock_shared();
     for (auto& file : fileSet) {
         if (file.getName() == fileName) {
+            mutex.unlock_shared();
             return &file;
         }
     }
