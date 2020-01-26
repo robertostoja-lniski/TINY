@@ -46,10 +46,7 @@ private:
     /// mutex synchronizujący mapę files
     std::shared_mutex mutex;
 
-    /// Getter dla rekordu połączonego z danym węzłem
-    /// @param nodeName nazwa węzła
-    /// na razie niepotrzebny
-    P2PRecord &operator[](P2PRecordPossessor);
+
 
 public:
     /// Dodaje plik do listy plików unieważnionych przez dany węzeł

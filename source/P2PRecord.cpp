@@ -45,7 +45,7 @@ RecordOperationResult P2PRecord::removeFile(const File& file) {
 
 std::vector<Communicate> P2PRecord::getBroadcastCommunicates(const std::string& owner) {
     // maksymalnie MAX_FILES_IN_COM plikow w komunikacie, wiec musimy wyslac kilka komunikatow
-    mutex.unlock_shared();
+    mutex.lock_shared();
 
     std::vector<Communicate> communicates;
 

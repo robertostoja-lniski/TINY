@@ -4,10 +4,7 @@
 
 #include "GlobalFiles.h"
 
-P2PRecord &GlobalFiles::operator[](P2PRecordPossessor possessor) {
-    std::shared_lock<std::shared_mutex> lk(mutex);
-    return files[possessor];
-}
+
 
 AddGlobalFileResult GlobalFiles::put(P2PRecordPossessor possessor, File file) {
     mutex.lock_shared();
@@ -29,6 +26,7 @@ void GlobalFiles::showFiles() {
 }
 
 File GlobalFiles::getFileByName(const std::string &fileName) {
+    mutex.lock_shared();
     for (auto & [possessor, possessorFiles] : files){
         for (const auto& file : possessorFiles.getFileSet()) {
             if(file.getName() == fileName){
@@ -36,11 +34,13 @@ File GlobalFiles::getFileByName(const std::string &fileName) {
             }
         }
     }
+    mutex.unlock_shared();
     throw std::runtime_error("nie ma takiego pliku");
 }
 
 std::vector<P2PRecordPossessor> GlobalFiles::getFilePossessors(const std::string& fileName) {
     std::vector <P2PRecordPossessor> possessorsIPs;
+    mutex.lock_shared();
     for (auto & [possessor, possessorsFiles] : files){
         for (const auto& file : possessorsFiles.getFileSet()){
             if (fileName == file.getName()){
@@ -48,5 +48,6 @@ std::vector<P2PRecordPossessor> GlobalFiles::getFilePossessors(const std::string
             }
         }
     }
+    mutex.unlock_shared();
     return possessorsIPs;
 }
