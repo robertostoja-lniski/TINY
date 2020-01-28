@@ -13,7 +13,7 @@ void UserRequestHandler::processRequest(const std::string &request) {
         return;
     } else if(request == "exit"){
         std::cout << "Exit program" << std::endl;
-        throw Exit();
+        exit(0);
     }
 
     if (ret != ACTION_SUCCESS) {
