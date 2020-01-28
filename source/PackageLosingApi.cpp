@@ -17,7 +17,7 @@ ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
     std::mt19937 gen{rd()};
 
     // number of workers
-    std::uniform_int_distribution<> randomPercent{0,1};
+    std::uniform_real_distribution<> randomPercent{0,1};
     float randomNumber = randomPercent(gen);
     if(randomNumber < lossRatio){
         return -1;
